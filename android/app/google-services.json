@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "337488247760",
+    "project_id": "osp-kolumna",
+    "storage_bucket": "osp-kolumna.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:337488247760:android:16f02a0c93cad1b09197d5",
+        "android_client_info": {
+          "package_name": "pl.ospkolumna.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAN41HYHixjeDVUzJqSetNgQZ2hQRPpplI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

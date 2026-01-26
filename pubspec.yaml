@@ -1,0 +1,69 @@
+name: osp_kolumna
+description: >-
+  Aplikacja mobilna dla Ochotniczej Straży Pożarnej Kolumna.
+  Umożliwia zarządzanie alarmami, dyżurami i komunikacją między strażakami.
+
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Design i UI
+  cupertino_icons: ^1.0.2
+  google_fonts: ^8.0.0
+
+  # Nawigacja - otwieranie map i URL'i
+  url_launcher: ^6.2.5
+
+  # Firebase - obsługa push notyfikacji i bazy danych
+  firebase_core: ^4.4.0
+  firebase_messaging: ^16.1.1
+  firebase_database: ^12.1.2
+  firebase_auth: ^6.1.4
+  cloud_firestore: ^6.1.2
+  firebase_storage: ^13.0.6
+
+  # HTTP i REST API
+  http: ^1.1.0
+
+  # Local storage
+  shared_preferences: ^2.2.2
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+
+  # Inne
+  provider: ^6.1.0
+  intl: ^0.20.2
+  pdf: ^3.10.7
+  printing: ^5.12.0
+  csv: ^6.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+  hive_generator: ^2.0.1
+  build_runner: ^2.4.6
+
+flutter:
+  uses-material-design: true
+
+  # Ikony i czcionki
+  assets:
+    - assets/
+    - assets/images/
+    - assets/icons/
+
+  fonts:
+    - family: Roboto
+      fonts:
+        - asset: assets/fonts/Roboto-Regular.ttf
+        - asset: assets/fonts/Roboto-Bold.ttf
+          weight: 700

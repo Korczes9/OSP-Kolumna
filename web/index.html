@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OSP Kolumna</title>
+    <link rel="stylesheet" href="css/styl.css">
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging.js"></script>
+</head>
+<body>
+    <div id="aplikacja">
+        <!-- Ekran logowania -->
+        <div id="ekranLogowania" class="ekran aktywny">
+            <div class="kontener">
+                <div class="formularz">
+                    <h1>OSP Kolumna</h1>
+                    <p class="podtytul">Logowanie</p>
+                    
+                    <input type="text" id="loginInput" placeholder="Login" class="pole-wejscia">
+                    <input type="password" id="hasloInput" placeholder="Hasło" class="pole-wejscia">
+                    
+                    <button id="przyciskLogowania" class="przycisk przycisk-glowny">Zaloguj</button>
+                    
+                    <p class="blad-komunikat" id="bladLogowania"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ekran domowy -->
+        <div id="ekranDomowy" class="ekran">
+            <div class="pasek-gorny">
+                <h1>OSP Kolumna</h1>
+                <button id="przyciskWylogowania" class="przycisk-wyloguj">Wyloguj</button>
+            </div>
+
+            <div class="lista-menu">
+                <div class="pozycja-menu" data-akcja="alarmy">
+                    <span class="ikona">🚨</span>
+                    <div>
+                        <h3>Alarmy</h3>
+                        <p>Bieżące alarmy i interwencje</p>
+                    </div>
+                </div>
+
+                <div class="pozycja-menu" data-akcja="czat">
+                    <span class="ikona">💬</span>
+                    <div>
+                        <h3>Czat jednostki</h3>
+                        <p>Komunikacja z zespołem</p>
+                    </div>
+                </div>
+
+                <div class="pozycja-menu" data-akcja="dyżury">
+                    <span class="ikona">📅</span>
+                    <div>
+                        <h3>Dyżury i szkolenia</h3>
+                        <p>Plan pracy i szkolenia</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ekran detali (Alarmy) -->
+        <div id="ekranAlarmy" class="ekran">
+            <div class="pasek-gorny">
+                <button id="powrotZAlarmy" class="przycisk-powrot">← Wróć</button>
+                <h1>Alarmy</h1>
+            </div>
+            <div class="kontener">
+                <div class="lista-alarmow">
+                    <div class="alarm alarm-aktywny">
+                        <div class="typ">POŻAR</div>
+                        <div class="adres">ul. Главна 10, Kolumna</div>
+                        <div class="czas">13:45</div>
+                    </div>
+                    <div class="alarm">
+                        <div class="typ">WYPADEK</div>
+                        <div class="adres">Droga wojewódzka 15</div>
+                        <div class="czas">12:30</div>
+                    </div>
+                    <div class="alarm">
+                        <div class="typ">ALARM</div>
+                        <div class="adres">ul. Długa 25</div>
+                        <div class="czas">11:15</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ekran detali (Czat) -->
+        <div id="ekranCzat" class="ekran">
+            <div class="pasek-gorny">
+                <button id="powrotZCzatu" class="przycisk-powrot">← Wróć</button>
+                <h1>Czat jednostki</h1>
+            </div>
+            <div class="kontener czat-kontener">
+                <div class="wiadomosci" id="listaWiadomosci">
+                    <div class="wiadomosc inna">
+                        <p>Jan: Cześć! Przygotuj sprzęt!</p>
+                        <span class="czas-wiadomosci">12:00</span>
+                    </div>
+                    <div class="wiadomosc wlasna">
+                        <p>Ty: Ok, już się robi!</p>
+                        <span class="czas-wiadomosci">12:01</span>
+                    </div>
+                </div>
+                <div class="pole-czatu">
+                    <input type="text" id="wejscieCzatu" placeholder="Napisz wiadomość..." class="pole-wejscia">
+                    <button id="przyciskWyslijWiadomosc" class="przycisk">Wyślij</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ekran detali (Dyżury) -->
+        <div id="ekranDyżury" class="ekran">
+            <div class="pasek-gorny">
+                <button id="powrotZDyżurow" class="przycisk-powrot">← Wróć</button>
+                <h1>Dyżury i szkolenia</h1>
+            </div>
+            <div class="kontener">
+                <div class="plan-tabulka">
+                    <h3>Rozkład dyżurów na ten miesiąc</h3>
+                    <table class="tabela">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Dyżurny</th>
+                                <th>Zastępca</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>26.01.2026</td>
+                                <td>Jan Kowalski</td>
+                                <td>Piotr Nowak</td>
+                            </tr>
+                            <tr>
+                                <td>27.01.2026</td>
+                                <td>Mariusz Lewandowski</td>
+                                <td>Krzysztof Szubert</td>
+                            </tr>
+                            <tr>
+                                <td>28.01.2026</td>
+                                <td>Zbigniew Górski</td>
+                                <td>Jan Kowalski</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h3 style="margin-top: 30px;">Nadchodzące szkolenia</h3>
+                    <div class="lista-szkolen">
+                        <div class="szkolenie">
+                            <div class="nazwa">🎓 Szkolenie gaśnicze</div>
+                            <div class="info">30 stycznia, 18:00</div>
+                        </div>
+                        <div class="szkolenie">
+                            <div class="nazwa">🎓 Szkolenie ratownictwa</div>
+                            <div class="info">6 lutego, 19:00</div>
+                        </div>
+     !-- Konfiguracja Firebase -->
+    <script src="js/firebase-config.js"></script>
+    <!-- Serwis Firebase -->
+    <script src="js/firebase-serwis.js"></script>
+    <!-- Aplikacja główna -->
+    <               </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/aplikacja.js"></script>
+</body>
+</html>
