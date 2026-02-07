@@ -1,5 +1,6 @@
 require('dotenv').config();
 const admin = require('firebase-admin');
+const express = require('express');
 
 const discordBotToken = process.env.DISCORD_BOT_TOKEN || '';
 const discordChannelId = process.env.DISCORD_CHANNEL_ID || '';
@@ -8,6 +9,7 @@ const messageLimit = Number(process.env.DISCORD_MESSAGE_LIMIT || '10');
 const alarmKeyword = String(process.env.DISCORD_ALARM_KEYWORD || 'KOLUMNA');
 const alarmCooldownMinutes = Number(process.env.DISCORD_ALARM_COOLDOWN_MINUTES || '4');
 const stateDocPath = process.env.DISCORD_STATE_DOC || 'config/discord_monitor';
+const port = Number(process.env.PORT || '10000');
 
 const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT || '';
 const serviceAccountB64 = process.env.FIREBASE_SERVICE_ACCOUNT_B64 || '';
@@ -236,6 +238,25 @@ async function start() {
   setInterval(checkDiscord, intervalMs);
   console.log(`Discord worker started, interval ${intervalMs}ms`);
 }
+
+// HTTP healthcheck endpoint dla Render Web Service
+const app = express();
+app.get('/', (req, res) => {
+  res.json({ 
+    status: 'running', 
+    lastMessageId: lastMessageId || null,
+    lastAlarmAt: lastAlarmAt ? lastAlarmAt.toISOString() : null,
+    uptime: process.uptime()
+  });
+});
+
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
+app.listen(port, () => {
+  console.log(`HTTP server listening on port ${port}`);
+});
 
 start().catch((err) => {
   console.error('Startup error', err);
