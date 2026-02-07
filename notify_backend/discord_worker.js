@@ -4,7 +4,7 @@ const express = require('express');
 
 const discordBotToken = process.env.DISCORD_BOT_TOKEN || '';
 const discordChannelId = process.env.DISCORD_CHANNEL_ID || '';
-const pollIntervalSeconds = Number(process.env.DISCORD_POLL_INTERVAL_SECONDS || '1');
+const pollIntervalSeconds = Number(process.env.DISCORD_POLL_INTERVAL_SECONDS || '5');
 const messageLimit = Number(process.env.DISCORD_MESSAGE_LIMIT || '10');
 const alarmKeyword = String(process.env.DISCORD_ALARM_KEYWORD || 'KOLUMNA');
 const alarmCooldownMinutes = Number(process.env.DISCORD_ALARM_COOLDOWN_MINUTES || '4');
@@ -84,7 +84,8 @@ async function fetchMessages() {
   }
 
   if (!response.ok) {
-    console.warn('Discord API error status:', response.status);
+    const errorText = await response.text();
+    console.warn('Discord API error status:', response.status, 'body:', errorText);
     return [];
   }
 
