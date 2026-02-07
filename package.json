@@ -1,4 +1,8 @@
 {
+  "scripts": {
+    "postinstall": "npm --prefix notify_backend install",
+    "start": "npm --prefix notify_backend run worker"
+  },
   "dependencies": {
     "firebase-admin": "^13.6.0",
     "xlsx": "^0.18.5"

@@ -48,6 +48,7 @@ android/local.properties
 
 # Notify backend
 notify_backend/node_modules/
+notify_backend/.env
 
 # Symbolication related
 app.*.symbols

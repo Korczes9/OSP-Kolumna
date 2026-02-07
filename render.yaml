@@ -1,0 +1,26 @@
+services:
+  - type: worker
+    name: osp-kolumna-discord-worker
+    runtime: node
+    rootDir: notify_backend
+    buildCommand: npm install
+    startCommand: npm run worker
+    envVars:
+      - key: DISCORD_POLL_INTERVAL_SECONDS
+        value: "1"
+      - key: DISCORD_MESSAGE_LIMIT
+        value: "10"
+      - key: DISCORD_ALARM_KEYWORD
+        value: "KOLUMNA"
+      - key: DISCORD_ALARM_COOLDOWN_MINUTES
+        value: "4"
+      - key: DISCORD_STATE_DOC
+        value: "config/discord_monitor"
+      - key: DISCORD_BOT_TOKEN
+        sync: false
+      - key: DISCORD_CHANNEL_ID
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT_B64
+        sync: false
