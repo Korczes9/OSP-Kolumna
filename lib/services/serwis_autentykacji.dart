@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 /// Serwis obsługujący autentykację użytkownika
 class AuthService {
   bool _loggedInUser = false;
@@ -12,25 +14,25 @@ class AuthService {
       await Future.delayed(const Duration(seconds: 2));
 
       if (email.isEmpty || password.isEmpty) {
-        print('Error: Email and password are required');
+        debugPrint('Error: Email and password are required');
         return false;
       }
 
       if (!email.contains('@')) {
-        print('Error: Invalid email format');
+        debugPrint('Error: Invalid email format');
         return false;
       }
 
       if (password.length < 6) {
-        print('Error: Password must be at least 6 characters');
+        debugPrint('Error: Password must be at least 6 characters');
         return false;
       }
 
       _loggedInUser = true;
-      print('User logged in: $email');
+      debugPrint('User logged in: $email');
       return true;
     } catch (e) {
-      print('Error during login: $e');
+      debugPrint('Error during login: $e');
       return false;
     }
   }
@@ -38,7 +40,7 @@ class AuthService {
   /// Logs out current user
   void logout() {
     _loggedInUser = false;
-    print('User logged out');
+    debugPrint('User logged out');
   }
 
   /// Checks if user is logged in
@@ -54,14 +56,14 @@ class AuthService {
       await Future.delayed(const Duration(seconds: 2));
 
       if (email.isEmpty || password.isEmpty || name.isEmpty) {
-        print('Błąd: Wszystkie pola są wymagane');
+        debugPrint('Błąd: Wszystkie pola są wymagane');
         return false;
       }
 
-      print('Nowy użytkownik zarejestrowany: $email');
+      debugPrint('Nowy użytkownik zarejestrowany: $email');
       return true;
     } catch (e) {
-      print('Błąd podczas rejestracji: $e');
+      debugPrint('Błąd podczas rejestracji: $e');
       return false;
     }
   }
@@ -71,14 +73,14 @@ class AuthService {
     try {
       await Future.delayed(const Duration(seconds: 2));
       if (email.isEmpty) {
-        print('Błąd: Email jest wymagany');
+        debugPrint('Błąd: Email jest wymagany');
         return false;
       }
 
-      print('Link do resetowania hasla wyslany na: $email');
+      debugPrint('Link do resetowania hasla wyslany na: $email');
       return true;
     } catch (e) {
-      print('Błąd podczas resetowania hasła: $e');
+      debugPrint('Błąd podczas resetowania hasła: $e');
       return false;
     }
   }

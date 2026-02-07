@@ -1,0 +1,99 @@
+╔══════════════════════════════════════════════════════════════════╗
+║          FIREBASE - KONFIGURACJA W 3 KROKACH (5 MINUT)          ║
+╚══════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────┐
+│ KROK 1: WDRÓŻ REGUŁY FIRESTORE (2 minuty)                       │
+└──────────────────────────────────────────────────────────────────┘
+
+1. Otwórz: https://console.firebase.google.com/
+2. Wybierz projekt: OSP Kolumna
+3. Menu → "Firestore Database" → zakładka "Rules"
+4. SKOPIUJ zawartość pliku: firestore.rules (w tym katalogu)
+5. WKLEJ w edytor reguł (zastąp wszystko)
+6. Kliknij "Publish"
+
+✅ Gotowe!
+
+┌──────────────────────────────────────────────────────────────────┐
+│ KROK 2: ZMIEŃ ROLE UŻYTKOWNIKÓW (3 minuty)                      │
+└──────────────────────────────────────────────────────────────────┘
+
+W Firebase Console → Firestore Database → kolekcja "strazacy"
+
+Dla KAŻDEGO użytkownika zmień pole "rola":
+  • naczelnik  → administrator
+  • dowodca    → moderator  
+  • kierowca   → strazak
+  • strazak    → strazak (bez zmian)
+
+Jak zmienić:
+1. Kliknij na dokument użytkownika
+2. Znajdź pole "rola"
+3. Zmień wartość
+4. Kliknij "Update"
+
+✅ Gotowe!
+
+┌──────────────────────────────────────────────────────────────────┐
+│ KROK 3: UTWÓRZ ADMINISTRATORA W APLIKACJI (1 minuta)            │
+└──────────────────────────────────────────────────────────────────┘
+
+1. Uruchom aplikację: flutter run -d chrome
+
+2. Na ekranie logowania kliknij:
+   "Pierwsze uruchomienie? Utwórz konto Administratora"
+
+3. Wprowadź dane:
+   Email: administrator@ospkolumna.pl
+   Hasło: admin123
+
+4. Kliknij "Utwórz konto Administratora"
+
+5. Zaloguj się utworzonym kontem
+
+✅ GOTOWE! Powinieneś zobaczyć "Panel Administratora"
+
+╔══════════════════════════════════════════════════════════════════╗
+║                        TEST UPRAWNIEŃ                            ║
+╚══════════════════════════════════════════════════════════════════╝
+
+ADMINISTRATOR:
+  ✅ Panel Administratora
+  ✅ Dodawanie wyjazdów
+  ✅ Zarządzanie strażakami
+  ✅ Wszystkie funkcje
+
+MODERATOR:
+  ✅ Panel Moderatora
+  ✅ Dodawanie wyjazdów
+  ✅ Edycja strażaków, samochodów, kalendarza
+  ❌ NIE: Pełne uprawnienia administratora
+
+STRAŻAK:
+  ✅ Podgląd wszystkich danych
+  ❌ NIE: Dodawanie/edycja czegokolwiek
+
+╔══════════════════════════════════════════════════════════════════╗
+║                    MAPOWANIE STARYCH RÓL                         ║
+╚══════════════════════════════════════════════════════════════════╝
+
+  naczelnik  →  administrator  (pełne uprawnienia)
+  dowodca    →  moderator      (edycja większości danych)
+  kierowca   →  strazak        (tylko podgląd)
+  strazak    →  strazak        (tylko podgląd)
+
+╔══════════════════════════════════════════════════════════════════╗
+║                     WIĘCEJ INFORMACJI                            ║
+╚══════════════════════════════════════════════════════════════════╝
+
+Zobacz szczegółowy przewodnik:
+  → KONFIGURACJA_KROK_PO_KROKU.md
+  → FIREBASE_KONFIGURACJA.md
+
+Pliki konfiguracyjne:
+  → firestore.rules (reguły bezpieczeństwa)
+  → firebase.json (konfiguracja główna)
+  → firestore.indexes.json (indeksy)
+
+Powodzenia! 🚀

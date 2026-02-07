@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Serwis obsługujący nawigację do map i otwieranie URL'i
@@ -10,7 +11,7 @@ class NavigationService {
     try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (e) {
-      print('✌️ Error opening map: $e');
+      debugPrint('✌️ Error opening map: $e');
     }
   }
 
@@ -20,7 +21,7 @@ class NavigationService {
     try {
       await launchUrl(uri);
     } catch (e) {
-      print('✌️ Error sending SMS: $e');
+      debugPrint('✌️ Error sending SMS: $e');
     }
   }
 
@@ -30,7 +31,7 @@ class NavigationService {
     try {
       await launchUrl(uri);
     } catch (e) {
-      print('✌️ Error making call: $e');
+      debugPrint('✌️ Error making call: $e');
     }
   }
 
@@ -47,7 +48,7 @@ class NavigationService {
     try {
       await launchUrl(uri);
     } catch (e) {
-      print('✌️ Error sending email: $e');
+      debugPrint('✌️ Error sending email: $e');
     }
   }
 }

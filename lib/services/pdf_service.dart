@@ -4,6 +4,19 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 class PdfService {
+  static pw.Font? _polishFont;
+  
+  /// Załaduj font obsługujący polskie znaki
+  static Future<void> _zaladujFont() async {
+    if (_polishFont == null) {
+      try {
+        _polishFont = await PdfGoogleFonts.robotoRegular();
+      } catch (e) {
+        print('Nie udało się załadować fontu: $e');
+      }
+    }
+  }
+  
   static Future<void> generateReportPdf({
     required String type,
     required String address,
@@ -11,6 +24,8 @@ class PdfService {
     required String end,
     required String number,
   }) async {
+    await _zaladujFont();
+    
     final pdf = pw.Document();
 
     final responders = await getResponders();
@@ -19,6 +34,9 @@ class PdfService {
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
+        theme: _polishFont != null 
+            ? pw.ThemeData.withFont(base: _polishFont!)
+            : null,
         build: (context) => pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
@@ -34,8 +52,8 @@ class PdfService {
             pw.Text('Adres: $address'),
             pw.Text('Czas alarmu: $start'),
             pw.Text('Czas zakończenia: $end'),
-            pw.Text('Strażak: ${responders[0]}'),
-            pw.Text('Woz: ${vehicles[0]}'),
+            pw.Text('Strażak: ${responders.isNotEmpty ? responders[0] : "Brak"}'),
+            pw.Text('Woz: ${vehicles.keys.isNotEmpty ? vehicles.keys.first : "Brak"}'),
             pw.Text('Numer: $number'),
             pw.Text('Nr wyjazdu: $number'),
             pw.SizedBox(height: 10),

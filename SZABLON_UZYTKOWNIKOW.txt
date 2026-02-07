@@ -1,0 +1,339 @@
+SZABLON DODAWANIA UŻYTKOWNIKÓW OSP KOLUMNA DO FIRESTORE
+========================================================
+
+Dla każdego użytkownika dodaj dokument w kolekcji "strazacy":
+
+┌────────────────────────────────────────────────────────────┐
+│ 1. ADMINISTRATOR - Grochulski Sebastian                    │
+└────────────────────────────────────────────────────────────┘
+Document ID: [SKOPIUJ User UID z Authentication dla korczes9@gmail.com]
+{
+  "imie": "Sebastian",
+  "nazwisko": "Grochulski",
+  "email": "korczes9@gmail.com",
+  "numerTelefonu": "000000000",
+  "rola": "administrator",
+  "aktywny": true,
+  "dataRejestracji": "2026-01-28T10:00:00Z"
+}
+
+┌────────────────────────────────────────────────────────────┐
+│ 2. MODERATOR - OSP Kolumna (konto sprzętu)                │
+└────────────────────────────────────────────────────────────┘
+Document ID: [SKOPIUJ User UID z Authentication dla osp_kolumna@straz.edu.pl]
+{
+  "imie": "OSP",
+  "nazwisko": "Kolumna",
+  "email": "osp_kolumna@straz.edu.pl",
+  "numerTelefonu": "000000000",
+  "rola": "moderator",
+  "aktywny": true,
+  "dataRejestracji": "2026-01-28T10:00:00Z"
+}
+
+┌────────────────────────────────────────────────────────────┐
+│ 3. STRAŻAK - Borkiewicz Dariusz                            │
+└────────────────────────────────────────────────────────────┘
+Document ID: [SKOPIUJ User UID z Authentication dla 2bora@wp.pl]
+{
+  "imie": "Dariusz",
+  "nazwisko": "Borkiewicz",
+  "email": "2bora@wp.pl",
+  "numerTelefonu": "000000000",
+  "rola": "strazak",
+  "aktywny": true,
+  "dataRejestracji": "2026-01-28T10:00:00Z"
+}
+
+┌────────────────────────────────────────────────────────────┐
+│ 4. STRAŻAK - Borzęcki Patryk                               │
+└────────────────────────────────────────────────────────────┘
+Document ID: [SKOPIUJ User UID z Authentication dla patrykborzecki11@gmail.com]
+{
+  "imie": "Patryk",
+  "nazwisko": "Borzęcki",
+  "email": "patrykborzecki11@gmail.com",
+  "numerTelefonu": "000000000",
+  "rola": "strazak",
+  "aktywny": true,
+  "dataRejestracji": "2026-01-28T10:00:00Z"
+}
+
+┌────────────────────────────────────────────────────────────┐
+│ 5. STRAŻAK - Felcenloben Krystian                          │
+└────────────────────────────────────────────────────────────┘
+Document ID: [SKOPIUJ User UID z Authentication dla krystianof12@interia.pl]
+{
+  "imie": "Krystian",
+  "nazwisko": "Felcenloben",
+  "email": "krystianof12@interia.pl",
+  "numerTelefonu": "000000000",
+  "rola": "strazak",
+  "aktywny": true,
+  "dataRejestracji": "2026-01-28T10:00:00Z"
+}
+
+┌────────────────────────────────────────────────────────────┐
+│ 6. STRAŻAK - Grzelak Kamil                                 │
+└────────────────────────────────────────────────────────────┘
+Document ID: [SKOPIUJ User UID z Authentication dla kamil1703@o2.pl]
+{
+  "imie": "Kamil",
+  "nazwisko": "Grzelak",
+  "email": "kamil1703@o2.pl",
+  "numerTelefonu": "000000000",
+  "rola": "strazak",
+  "aktywny": true,
+  "dataRejestracji": "2026-01-28T10:00:00Z"
+}
+
+┌────────────────────────────────────────────────────────────┐
+│ 7. STRAŻAK - Kłos Dominik                                  │
+└────────────────────────────────────────────────────────────┘
+Document ID: [SKOPIUJ User UID z Authentication dla domio123dko@gmail.com]
+{
+  "imie": "Dominik",
+  "nazwisko": "Kłos",
+  "email": "domio123dko@gmail.com",
+  "numerTelefonu": "000000000",
+  "rola": "strazak",
+  "aktywny": true,
+  "dataRejestracji": "2026-01-28T10:00:00Z"
+}
+
+┌────────────────────────────────────────────────────────────┐
+│ 8. STRAŻAK - Knop Kacper                                   │
+└────────────────────────────────────────────────────────────┘
+Document ID: [SKOPIUJ User UID z Authentication dla kacper.knop4@wp.pl]
+{
+  "imie": "Kacper",
+  "nazwisko": "Knop",
+  "email": "kacper.knop4@wp.pl",
+  "numerTelefonu": "000000000",
+  "rola": "strazak",
+  "aktywny": true,
+  "dataRejestracji": "2026-01-28T10:00:00Z"
+}
+
+┌────────────────────────────────────────────────────────────┐
+│ 9. STRAŻAK - Kowalski Hubert                               │
+└────────────────────────────────────────────────────────────┘
+Document ID: [SKOPIUJ User UID z Authentication dla hubert.469b@gmail.com]
+{
+  "imie": "Hubert",
+  "nazwisko": "Kowalski",
+  "email": "hubert.469b@gmail.com",
+  "numerTelefonu": "000000000",
+  "rola": "strazak",
+  "aktywny": true,
+  "dataRejestracji": "2026-01-28T10:00:00Z"
+}
+
+┌────────────────────────────────────────────────────────────┐
+│ 10. STRAŻAK - Kowalski Jerzy                               │
+└────────────────────────────────────────────────────────────┘
+Document ID: [SKOPIUJ User UID z Authentication dla korkihard9@wp.pl]
+{
+  "imie": "Jerzy",
+  "nazwisko": "Kowalski",
+  "email": "korkihard9@wp.pl",
+  "numerTelefonu": "000000000",
+  "rola": "strazak",
+  "aktywny": true,
+  "dataRejestracji": "2026-01-28T10:00:00Z"
+}
+
+┌────────────────────────────────────────────────────────────┐
+│ 11. STRAŻAK - Kubsz Kamil                                  │
+└────────────────────────────────────────────────────────────┘
+Document ID: [SKOPIUJ User UID z Authentication dla kamil.kubsz@o2.pl]
+{
+  "imie": "Kamil",
+  "nazwisko": "Kubsz",
+  "email": "kamil.kubsz@o2.pl",
+  "numerTelefonu": "000000000",
+  "rola": "strazak",
+  "aktywny": true,
+  "dataRejestracji": "2026-01-28T10:00:00Z"
+}
+
+┌────────────────────────────────────────────────────────────┐
+│ 12. STRAŻAK - Kujawa Robert                                │
+└────────────────────────────────────────────────────────────┘
+Document ID: [SKOPIUJ User UID z Authentication dla robertkujawa3108@gmail.com]
+{
+  "imie": "Robert",
+  "nazwisko": "Kujawa",
+  "email": "robertkujawa3108@gmail.com",
+  "numerTelefonu": "000000000",
+  "rola": "strazak",
+  "aktywny": true,
+  "dataRejestracji": "2026-01-28T10:00:00Z"
+}
+
+┌────────────────────────────────────────────────────────────┐
+│ 13. STRAŻAK - Markiewicz Jakub                             │
+└────────────────────────────────────────────────────────────┘
+Document ID: [SKOPIUJ User UID z Authentication dla kubamarki@gmail.com]
+{
+  "imie": "Jakub",
+  "nazwisko": "Markiewicz",
+  "email": "kubamarki@gmail.com",
+  "numerTelefonu": "000000000",
+  "rola": "strazak",
+  "aktywny": true,
+  "dataRejestracji": "2026-01-28T10:00:00Z"
+}
+
+┌────────────────────────────────────────────────────────────┐
+│ 14. STRAŻAK - Mataśka Michał                               │
+└────────────────────────────────────────────────────────────┘
+Document ID: [SKOPIUJ User UID z Authentication dla michalmataska201@go2.pl]
+{
+  "imie": "Michał",
+  "nazwisko": "Mataśka",
+  "email": "michalmataska201@go2.pl",
+  "numerTelefonu": "000000000",
+  "rola": "strazak",
+  "aktywny": true,
+  "dataRejestracji": "2026-01-28T10:00:00Z"
+}
+
+┌────────────────────────────────────────────────────────────┐
+│ 15. STRAŻAK - Nowicki Bartłomiej                           │
+└────────────────────────────────────────────────────────────┘
+Document ID: [SKOPIUJ User UID z Authentication dla bartek1292001@wp.pl]
+{
+  "imie": "Bartłomiej",
+  "nazwisko": "Nowicki",
+  "email": "bartek1292001@wp.pl",
+  "numerTelefonu": "000000000",
+  "rola": "strazak",
+  "aktywny": true,
+  "dataRejestracji": "2026-01-28T10:00:00Z"
+}
+
+┌────────────────────────────────────────────────────────────┐
+│ 16. STRAŻAK - Paliwoda Mateusz                             │
+└────────────────────────────────────────────────────────────┘
+Document ID: [SKOPIUJ User UID z Authentication dla palmateusz641@gmail.com]
+{
+  "imie": "Mateusz",
+  "nazwisko": "Paliwoda",
+  "email": "palmateusz641@gmail.com",
+  "numerTelefonu": "000000000",
+  "rola": "strazak",
+  "aktywny": true,
+  "dataRejestracji": "2026-01-28T10:00:00Z"
+}
+
+┌────────────────────────────────────────────────────────────┐
+│ 17. STRAŻAK - Pawlak Damian                                │
+└────────────────────────────────────────────────────────────┘
+Document ID: [SKOPIUJ User UID z Authentication dla dpawlak@autograf.pl]
+{
+  "imie": "Damian",
+  "nazwisko": "Pawlak",
+  "email": "dpawlak@autograf.pl",
+  "numerTelefonu": "000000000",
+  "rola": "strazak",
+  "aktywny": true,
+  "dataRejestracji": "2026-01-28T10:00:00Z"
+}
+
+┌────────────────────────────────────────────────────────────┐
+│ 18. STRAŻAK - Piecyk Piotr                                 │
+└────────────────────────────────────────────────────────────┘
+Document ID: [SKOPIUJ User UID z Authentication dla ppiecyk@onet.pl]
+{
+  "imie": "Piotr",
+  "nazwisko": "Piecyk",
+  "email": "ppiecyk@onet.pl",
+  "numerTelefonu": "000000000",
+  "rola": "strazak",
+  "aktywny": true,
+  "dataRejestracji": "2026-01-28T10:00:00Z"
+}
+
+════════════════════════════════════════════════════════════
+
+SZYBKA LISTA EMAILI DO DODANIA W AUTHENTICATION:
+(Wszystkie z domyślnym hasłem: ospkolumna123)
+
+1. korczes9@gmail.com
+2. osp_kolumna@straz.edu.pl
+3. 2bora@wp.pl
+4. patrykborzecki11@gmail.com
+5. krystianof12@interia.pl
+6. kamil1703@o2.pl
+7. domio123dko@gmail.com
+8. kacper.knop4@wp.pl
+9. hubert.469b@gmail.com
+10. korkihard9@wp.pl
+11. kamil.kubsz@o2.pl
+12. robertkujawa3108@gmail.com
+13. kubamarki@gmail.com
+14. michalmataska201@go2.pl
+15. bartek1292001@wp.pl
+16. palmateusz641@gmail.com
+17. dpawlak@autograf.pl
+18. ppiecyk@onet.pl
+
+════════════════════════════════════════════════════════════
+
+JAK DODAĆ W FIREBASE CONSOLE:
+
+KROK 1 - Authentication:
+1. Firebase Console → Authentication → Users
+2. Dla każdego emaila kliknij "Add user"
+3. Email: (wpisz z listy powyżej)
+4. Password: ospkolumna123 (dla wszystkich)
+5. Kliknij "Add user"
+6. ZAPISZ User UID (będzie potrzebny w kroku 2)
+
+KROK 2 - Firestore:
+1. Firestore Database → Data → kolekcja "strazacy"
+2. Kliknij "Add document"
+3. Document ID: wklej User UID z Authentication
+4. Dodaj każde pole RĘCZNIE (kliknij "Add field"):
+   
+   Pole            | Typ      | Wartość
+   ────────────────┼──────────┼─────────────────────
+   imie            | string   | (z szablonu powyżej)
+   nazwisko        | string   | (z szablonu powyżej)
+   email           | string   | (z szablonu powyżej)
+   numerTelefonu   | string   | 000000000
+   rola            | string   | administrator/moderator/strazak
+   aktywny         | boolean  | true
+   dataRejestracji | string   | 2026-01-28T10:00:00Z
+
+5. Kliknij "Save"
+6. Powtórz dla wszystkich użytkowników
+
+════════════════════════════════════════════════════════════
+
+WAŻNE UWAGI:
+
+⚠️  Document ID MUSI być taki sam jak User UID z Authentication!
+⚠️  Pole "rola" musi być DOKŁADNIE: administrator, moderator lub strazak
+⚠️  Pole "aktywny" to boolean (zaznacz checkbox w Firebase)
+⚠️  Wszystkie pozostałe pola to stringi (tekst)
+⚠️  Hasło dla wszystkich: ospkolumna123
+
+════════════════════════════════════════════════════════════
+
+PODZIAŁ RÓL:
+
+👑 ADMINISTRATOR (1): Sebastian Grochulski
+   Email: korczes9@gmail.com
+   Hasło: ospkolumna123
+   ✅ Pełne uprawnienia
+
+🛡️ MODERATOR (1): OSP Kolumna (konto sprzętu)
+   Email: osp_kolumna@straz.edu.pl
+   Hasło: ospkolumna123
+   ✅ Edycja wyjazdów, strażaków, samochodów
+
+👤 STRAŻACY (16): Wszyscy pozostali
+   Hasło: ospkolumna123
+   ❌ Tylko podgląd, brak edycji

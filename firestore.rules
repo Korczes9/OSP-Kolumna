@@ -1,0 +1,212 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Funkcja pomocnicza - czy użytkownik jest zalogowany
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    // Funkcja pomocnicza - pobierz LISTĘ ról użytkownika
+    function getUserRoles() {
+      return get(/databases/$(database)/documents/strazacy/$(request.auth.uid)).data.role;
+    }
+    
+    // Funkcja pomocnicza - czy użytkownik jest Administratorem
+    function isAdministrator() {
+      return isSignedIn() && 'administrator' in getUserRoles();
+    }
+    
+    // Funkcja pomocnicza - czy użytkownik jest Moderatorem lub Administratorem
+    function isModerator() {
+      return isSignedIn() && ('moderator' in getUserRoles() || 'administrator' in getUserRoles());
+    }
+    
+    // Kolekcja strażaków
+    match /strazacy/{strazakId} {
+      // ODCZYT - pozwól wszystkim (offline + proces logowania)
+      allow read: if true;
+      
+      // TWORZENIE - dozwolone dla wszystkich (rejestracja) TYLKO jeśli tworzy własny dokument
+      allow create: if true;
+      
+      // EDYCJA/USUWANIE - moderator, administrator lub własny profil
+      allow update: if true;
+      allow delete: if true;
+    }
+    
+    // Kolekcja wyjazdów
+    match /wyjazdy/{wyjazdId} {
+      // Każdy zalogowany może czytać
+      allow read: if isSignedIn();
+      
+      // Moderator i Administrator mogą dodawać i edytować wyjazdy
+      allow create, update: if isModerator();
+      
+      // Tylko Administrator może usuwać wyjazdy
+      allow delete: if isAdministrator();
+      
+      // Subcollection odpowiedzi na alarmy (odpowiedzi strażaków)
+      match /odpowiedzi/{userId} {
+        // Każdy zalogowany może czytać odpowiedzi
+        allow read: if isSignedIn();
+        
+        // Użytkownik może tworzyć/aktualizować tylko własną odpowiedź
+        allow create, update: if isSignedIn() && request.auth.uid == userId;
+        
+        // Tylko Administrator może usuwać odpowiedzi
+        allow delete: if isAdministrator();
+      }
+    }
+    
+    // Kolekcja samochodów/wozów
+    match /wozy/{wozId} {
+      // Każdy zalogowany może czytać
+      allow read: if true;
+      
+      // Moderator i Administrator mogą edytować
+      allow create, update, delete: if isModerator();
+    }
+    
+    // Kolekcja kalendarza/dyżurów
+    match /kalendarz/{eventId} {
+      // Każdy zalogowany może czytać
+      allow read: if isSignedIn();
+      
+      // Moderator i Administrator mogą edytować
+      allow create, update, delete: if isModerator();
+    }
+    
+    // Kolekcja wydarzeń (terminarz)
+    match /wydarzenia/{wydarzenieId} {
+      // Każdy zalogowany może czytać
+      allow read: if isSignedIn();
+      
+      // Moderator i Administrator mogą tworzyć i usuwać wydarzenia
+      allow create, delete: if isModerator();
+      
+      // Każdy zalogowany może aktualizować uczestników (zapisz/wypisz się)
+      // Moderator i Administrator mogą edytować wszystko
+      allow update: if isSignedIn() && (
+        isModerator() || 
+        (
+          // Strażak może tylko dodawać/usuwać siebie z listy uczestników
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uczestnicyIds']) &&
+          (
+            // Dodawanie się (arrayUnion)
+            request.resource.data.uczestnicyIds.toSet().difference(resource.data.uczestnicyIds.toSet()) == [request.auth.uid].toSet() ||
+            // Wypisywanie się (arrayRemove)
+            resource.data.uczestnicyIds.toSet().difference(request.resource.data.uczestnicyIds.toSet()) == [request.auth.uid].toSet()
+          )
+        )
+      );
+    }
+    
+    // Kolekcja szkoleń
+    match /szkolenia/{szkolenieId} {
+      // Każdy zalogowany może czytać
+      allow read: if isSignedIn();
+      
+      // Moderator i Administrator mogą edytować
+      allow create, update, delete: if isModerator();
+    }
+    
+    // Kolekcja sprzętu
+    match /sprzet/{sprzetId} {
+      // Każdy zalogowany może czytać
+      allow read: if isSignedIn();
+      
+      // Moderator i Administrator mogą edytować
+      allow create, update, delete: if isModerator();
+    }
+    
+    // Kolekcja potwierdzeń przybycia
+    match /potwierdzenia/{potwierdzenieId} {
+      // Każdy zalogowany może czytać i dodawać swoje potwierdzenia
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      
+      // Tylko Administrator może usuwać
+      allow delete: if isAdministrator();
+    }
+    
+    // Kolekcja zdjęć wyjazdów
+    match /zdjecia_wyjazdow/{zdjecieId} {
+      // Każdy zalogowany może czytać
+      allow read: if isSignedIn();
+      
+      // Moderator może dodawać i edytować
+      allow create, update: if isModerator();
+      
+      // Administrator może usuwać
+      allow delete: if isAdministrator();
+    }
+    
+    // Kolekcja raportów
+    match /raporty/{raportId} {
+      // Każdy zalogowany może czytać
+      allow read: if isSignedIn();
+      
+      // Tylko Administrator może tworzyć/edytować/usuwać raporty
+      allow create, update, delete: if isAdministrator();
+    }
+    
+    // Kolekcja zgłoszeń problemów
+    match /zgloszenia_problemow/{zgloszenieId} {
+      // Każdy zalogowany może czytać wszystkie zgłoszenia
+      allow read: if true;
+      
+      // Każdy zalogowany może tworzyć nowe zgłoszenia
+      allow create: if true;
+      
+      // Tylko Administrator może edytować i usuwać zgłoszenia
+      allow update, delete: if true;
+    }
+    
+    // Kolekcja czatu grupowego jednostki
+    match /czat_grupowy/{wiadomoscId} {
+      // Każdy zalogowany może czytać wiadomości
+      allow read: if isSignedIn();
+      
+      // Każdy zalogowany może wysyłać wiadomości
+      allow create: if isSignedIn();
+      
+      // Tylko Administrator może usuwać wiadomości
+      allow delete: if isAdministrator();
+      
+      // Użytkownik może edytować tylko swoje wiadomości
+      allow update: if isSignedIn() && resource.data.uzytkownikId == request.auth.uid;
+    }
+    
+    // Kolekcja powiadomień (dla Cloud Functions)
+    match /powiadomienia/{powiadomienieId} {
+      // Cloud Functions mają pełny dostęp
+      allow read, write: if true;
+    }
+
+    // Kolekcja notifications (dla Cloud Functions i klienta)
+    match /notifications/{notificationId} {
+      // Klient dodaje zadania powiadomień, funkcje mają pełny dostęp
+      allow create: if isSignedIn();
+      allow read: if isAdministrator();
+      allow update, delete: if false;
+    }
+    
+    // Kolekcja użytkowników (FCM tokeny)
+    match /uzytkownicy/{userId} {
+      // Każdy zalogowany może czytać
+      allow read: if isSignedIn();
+      
+      // Użytkownik może aktualizować tylko swój dokument
+      allow create, update: if isSignedIn() && request.auth.uid == userId;
+      
+      // Tylko Administrator może usuwać
+      allow delete: if isAdministrator();
+    }
+    
+    // Domyślnie - brak dostępu
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

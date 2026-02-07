@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../services/report_service.dart';
 
 class AlarmScreen extends StatefulWidget {
 	const AlarmScreen({super.key});
@@ -21,7 +20,7 @@ class _AlarmScreenState extends State<AlarmScreen> {
 	@override
 	void initState() {
 		super.initState();
-		ReportService.startReport();
+		// ReportService.startReport(); // Wymaga Firebase - odkomentuj po konfiguracji
 	}
 
 	@override

@@ -1,0 +1,159 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "wyjazdy",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "kategoria",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dataWyjazdu",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "wyjazdy",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dataUtworzenia",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "wyjazdy",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "kategoria",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dataUtworzenia",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "wyjazdy",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "data",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "strazakId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "strazacy",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "aktywny",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "rola",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "wydarzenia",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "dataRozpoczecia",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "typ",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "szkolenia",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "strazakId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dataWaznosci",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "sprzet",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "kategoria",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "strazacy",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "aktywny",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dostepny",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "strazacy",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "aktywny",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dataRejestracji",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "wyjazdy",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "data",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "utworzonePrzez",
+          "order": "ASCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
