@@ -106,6 +106,9 @@ class SerwisPowiadomien {
     if (initialMessage != null) {
       _obsluzKliknieciePowiadomienia(initialMessage);
     }
+
+    // Nasłuchuj na powiadomienia z Firestore w czasie rzeczywistym
+    _nasluchujPowiadomieniaZFirestore();
   }
 
   /// Obsługa powiadomienia gdy aplikacja jest otwarta
@@ -259,6 +262,9 @@ class SerwisPowiadomien {
       description: 'Powiadomienia alarmowe OSP',
       importance: Importance.max,
       playSound: true,
+      sound: RawResourceAndroidNotificationSound('syrena'),
+      enableVibration: true,
+      enableLights: true,
     );
 
     const discordChannel = AndroidNotificationChannel(
@@ -266,6 +272,8 @@ class SerwisPowiadomien {
       'Discord',
       description: 'Powiadomienia z Discorda',
       importance: Importance.high,
+      playSound: true,
+      enableVibration: true,
     );
 
     const defaultChannel = AndroidNotificationChannel(
@@ -273,6 +281,8 @@ class SerwisPowiadomien {
       'Powiadomienia',
       description: 'Ogólne powiadomienia aplikacji',
       importance: Importance.high,
+      playSound: true,
+      enableVibration: true,
     );
 
     final androidPlugin =
@@ -283,6 +293,155 @@ class SerwisPowiadomien {
     await androidPlugin.createNotificationChannel(alarmChannel);
     await androidPlugin.createNotificationChannel(discordChannel);
     await androidPlugin.createNotificationChannel(defaultChannel);
+  }
+
+  /// Nasłuchuje na nowe powiadomienia w kolekcji Firestore
+  static void _nasluchujPowiadomieniaZFirestore() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      debugPrint('❌ Brak zalogowanego użytkownika - pomiń nasłuchiwanie powiadomień');
+      return;
+    }
+
+    final myToken = _fcmToken;
+    if (myToken == null) {
+      debugPrint('❌ Brak tokenu FCM - pomiń nasłuchiwanie powiadomień');
+      return;
+    }
+
+    debugPrint('🔔 Uruchamiam nasłuchiwanie powiadomień z Firestore...');
+
+    // Nasłuchuj tylko na nowe dokumenty (utworzone w ostatnich 10 sekundach)
+    final cutoffTime = DateTime.now().subtract(const Duration(seconds: 10));
+
+    FirebaseFirestore.instance
+        .collection('notifications')
+        .where('utworzonoO', isGreaterThan: cutoffTime)
+        .snapshots()
+        .listen((snapshot) async {
+      for (var change in snapshot.docChanges) {
+        if (change.type != DocumentChangeType.added) continue;
+
+        final doc = change.doc;
+        final data = doc.data();
+        if (data == null) continue;
+
+        // Sprawdź czy powiadomienie jest dla mnie
+        final tokens = List<String>.from(data['tokens'] ?? []);
+        if (!tokens.contains(myToken)) continue;
+
+        // Sprawdź czy już wyświetlone
+        final wyslane = data['wyslane'] as bool? ?? false;
+        if (wyslane) continue;
+
+        final type = data['type'] as String? ?? '';
+        final title = data['title'] as String? ?? 'Powiadomienie';
+        final body = data['body'] as String? ?? '';
+        final notificationData = Map<String, dynamic>.from(data['data'] ?? {});
+
+        debugPrint('🔔 Nowe powiadomienie z Firestore: $title');
+
+        // Wyświetl lokalne powiadomienie
+        await _wyswietlLokalnePowiadomienie(
+          type: type,
+          title: title,
+          body: body,
+          data: notificationData,
+        );
+
+        // Oznacz jako wyświetlone
+        try {
+          await doc.reference.update({'wyslane': true});
+        } catch (e) {
+          debugPrint('⚠️ Nie udało się oznaczyć powiadomienia jako wyslane: $e');
+        }
+      }
+    }, onError: (error) {
+      debugPrint('❌ Błąd nasłuchiwania powiadomień: $error');
+    });
+  }
+
+  /// Wyświetla lokalne powiadomienie z dźwiękiem
+  static Future<void> _wyswietlLokalnePowiadomienie({
+    required String type,
+    required String title,
+    required String body,
+    required Map<String, dynamic> data,
+  }) async {
+    if (!_localNotificationsReady) {
+      await _inicjalizujLocalNotifications();
+    }
+
+    String channelId;
+    String channelName;
+    AndroidNotificationSound? sound;
+
+    if (type == 'ALARM' || type == 'alarm') {
+      channelId = 'alarm_channel';
+      channelName = 'Alarmy';
+      sound = const RawResourceAndroidNotificationSound('syrena');
+      
+      // Dla alarmu - włącz również syrenę i pokaż pełnoekranowy ekran
+      await _odtworzSyrene();
+      _pokazEkranAlarmuZData(title, body, data);
+    } else if (type == 'discord') {
+      channelId = 'discord_channel';
+      channelName = 'Discord';
+    } else {
+      channelId = 'default_channel';
+      channelName = 'Powiadomienia';
+    }
+
+    final details = NotificationDetails(
+      android: AndroidNotificationDetails(
+        channelId,
+        channelName,
+        importance: type == 'ALARM' || type == 'alarm' 
+            ? Importance.max 
+            : Importance.high,
+        priority: type == 'ALARM' || type == 'alarm' 
+            ? Priority.max 
+            : Priority.high,
+        playSound: true,
+        sound: sound,
+        enableVibration: true,
+        enableLights: true,
+        fullScreenIntent: type == 'ALARM' || type == 'alarm',
+        category: type == 'ALARM' || type == 'alarm'
+            ? AndroidNotificationCategory.alarm
+            : AndroidNotificationCategory.message,
+        visibility: NotificationVisibility.public,
+      ),
+    );
+
+    await _localNotifications.show(
+      DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      title,
+      body,
+      details,
+    );
+
+    debugPrint('✅ Powiadomienie wyświetlone: $title');
+  }
+
+  /// Pokazuje ekran alarmu z danych
+  static void _pokazEkranAlarmuZData(
+      String title, String body, Map<String, dynamic> data) {
+    if (_context == null || !_context!.mounted) return;
+
+    Navigator.of(_context!).push(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => EkranAlarmufullscreen(
+          tytul: title,
+          lokalizacja: data['lokalizacja']?.toString() ?? 'Brak lokalizacji',
+          kategoria: data['kategoria']?.toString() ?? 'Alarm',
+          opis: body,
+          wyjazdId: data['wyjazdId']?.toString(),
+          godzina: data['godzina']?.toString() ?? DateTime.now().toString(),
+        ),
+      ),
+    );
   }
 
   static Future<void> _inicjalizujLocalNotifications() async {

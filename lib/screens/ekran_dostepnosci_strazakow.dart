@@ -46,13 +46,29 @@ class _EkranDostepnosciStrazakowState extends State<EkranDostepnosciStrazakow> {
 
           final dostepni = strazacy.where((s) => s.dostepny).toList();
           final niedostepni = strazacy.where((s) => !s.dostepny).toList();
+          
+          // Znajdź aktualnego strażaka w liście (aktualna wartość z bazy)
+          final mojaAktualnaDostepnosc = strazacy
+              .firstWhere(
+                (s) => s.id == widget.aktualnyStrazak.id,
+                orElse: () => widget.aktualnyStrazak,
+              )
+              .dostepny;
+          final mojaOstatniaZmiana = strazacy
+              .firstWhere(
+                (s) => s.id == widget.aktualnyStrazak.id,
+                orElse: () => widget.aktualnyStrazak,
+              )
+              .ostatniaZmianaStatusu;
 
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
               // Podsumowanie
               Card(
-                color: Colors.green[50],
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.green[900]
+                    : Colors.green[50],
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Row(
@@ -83,31 +99,35 @@ class _EkranDostepnosciStrazakowState extends State<EkranDostepnosciStrazakow> {
               const SizedBox(height: 16),
 
               // Mój status
-              Card(
-                color: widget.aktualnyStrazak.dostepny
-                    ? Colors.green[50]
-                    : Colors.orange[50],
+                Card(
+                color: mojaAktualnaDostepnosc
+                  ? (Theme.of(context).brightness == Brightness.dark
+                    ? Colors.green[900]
+                    : Colors.green[50])
+                  : (Theme.of(context).brightness == Brightness.dark
+                    ? Colors.orange[900]
+                    : Colors.orange[50]),
                 child: ListTile(
                   leading: Icon(
-                    widget.aktualnyStrazak.dostepny
+                    mojaAktualnaDostepnosc
                         ? Icons.check_circle
                         : Icons.cancel,
-                    color: widget.aktualnyStrazak.dostepny
+                    color: mojaAktualnaDostepnosc
                         ? Colors.green
                         : Colors.orange,
                     size: 40,
                   ),
                   title: Text(
-                    'Twój status: ${widget.aktualnyStrazak.dostepny ? "DOSTĘPNY" : "NIEDOSTĘPNY"}',
+                    'Twój status: ${mojaAktualnaDostepnosc ? "DOSTĘPNY" : "NIEDOSTĘPNY"}',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  subtitle: widget.aktualnyStrazak.ostatniaZmianaStatusu != null
+                  subtitle: mojaOstatniaZmiana != null
                       ? Text(
-                          'Zmieniono: ${_formatujDate(widget.aktualnyStrazak.ostatniaZmianaStatusu!)}',
+                          'Zmieniono: ${_formatujDate(mojaOstatniaZmiana)}',
                         )
                       : null,
                   trailing: Switch(
-                    value: widget.aktualnyStrazak.dostepny,
+                    value: mojaAktualnaDostepnosc,
                     onChanged: (value) => _zmienStatus(value),
                     activeThumbColor: Colors.green,
                   ),

@@ -20,6 +20,7 @@ class _EkranSprzetuState extends State<EkranSprzetu> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Inwentaryzacja sprzętu'),
@@ -129,7 +130,7 @@ class _EkranSprzetuState extends State<EkranSprzetu> {
               // Ostrzeżenia o przeglądach
               if (wymagaPrzegladu > 0) ...[
                 Card(
-                  color: Colors.amber[50],
+                  color: isDark ? Colors.amber[900] : Colors.amber[50],
                   child: Padding(
                     padding: const EdgeInsets.all(12),
                     child: Row(

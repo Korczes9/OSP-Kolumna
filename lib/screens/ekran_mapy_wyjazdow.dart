@@ -220,11 +220,12 @@ class _EkranMapyWyjazdowState extends State<EkranMapyWyjazdow> {
                 'Data',
                 _formatujDate(wyjazd.dataWyjazdu),
               ),
-              _buildInfoRow(
-                Icons.people,
-                'Liczba strażaków',
-                '${wyjazd.strazacyIds.length}',
-              ),
+              if (wyjazd.liczbaStrazakow > 0)
+                _buildInfoRow(
+                  Icons.people,
+                  'Liczba strażaków',
+                  '${wyjazd.liczbaStrazakow}',
+                ),
               if (wyjazd.opis.isNotEmpty) ...[
                 const Divider(),
                 const Text(

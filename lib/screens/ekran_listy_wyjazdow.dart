@@ -17,6 +17,14 @@ class EkranListyWyjazdow extends StatefulWidget {
 class _EkranListyWyjazdowState extends State<EkranListyWyjazdow> {
   KategoriaWyjazdu? _wybranaKategoria;
   int? _wybranyRok;
+  bool _filtrBiezacyKwartal = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // Domyślnie filtruj po bieżącym roku (który jest zgodny z bieżącym kwartałem)
+    _wybranyRok = DateTime.now().year;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -74,8 +82,29 @@ class _EkranListyWyjazdowState extends State<EkranListyWyjazdow> {
                         )),
                   ],
                   onChanged: (value) {
-                    setState(() => _wybranyRok = value);
+                    setState(() {
+                      _wybranyRok = value;
+                      if (value != null) {
+                        _filtrBiezacyKwartal = false;
+                      }
+                    });
                   },
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: FilterChip(
+                    label: const Text('Bieżący kwartał'),
+                    selected: _filtrBiezacyKwartal,
+                    onSelected: (selected) {
+                      setState(() {
+                        _filtrBiezacyKwartal = selected;
+                        if (selected && _wybranyRok == null) {
+                          _wybranyRok = DateTime.now().year;
+                        }
+                      });
+                    },
+                  ),
                 ),
               ],
             ),
@@ -97,6 +126,22 @@ class _EkranListyWyjazdowState extends State<EkranListyWyjazdow> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
+                        const SizedBox(height: 8),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: FilterChip(
+                            label: const Text('Bieżący kwartał'),
+                            selected: _filtrBiezacyKwartal,
+                            onSelected: (selected) {
+                              setState(() {
+                                _filtrBiezacyKwartal = selected;
+                                if (selected && _wybranyRok == null) {
+                                  _wybranyRok = DateTime.now().year;
+                                }
+                              });
+                            },
+                          ),
+                        ),
                         const Icon(Icons.error, color: Colors.red, size: 48),
                         const SizedBox(height: 16),
                         Text('Błąd: ${snapshot.error}'),
@@ -107,21 +152,18 @@ class _EkranListyWyjazdowState extends State<EkranListyWyjazdow> {
 
                 final wyjazdy = snapshot.data ?? [];
 
-                if (wyjazdy.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.inbox, color: Colors.grey[400], size: 64),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Brak wyjazdów',
-                          style: TextStyle(color: Colors.grey[600], fontSize: 18),
-                        ),
-                      ],
-                    ),
-                  );
-                }
+            if (wyjazdy.isEmpty) {
+              return const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.inbox, color: Colors.grey, size: 48),
+                    SizedBox(height: 16),
+                    Text('Brak wyjazdów do wyświetlenia'),
+                  ],
+                ),
+              );
+            }
 
                 return ListView.builder(
                   itemCount: wyjazdy.length,
@@ -217,14 +259,14 @@ class _EkranListyWyjazdowState extends State<EkranListyWyjazdow> {
                 style: TextStyle(color: Colors.grey[700], fontSize: 12),
               ),
             ],
-            if (wyjazd.strazacyIds.isNotEmpty) ...[
+            if (wyjazd.liczbaStrazakow > 0) ...[
               const SizedBox(height: 4),
               Row(
                 children: [
                   Icon(Icons.people, size: 14, color: Colors.grey[600]),
                   const SizedBox(width: 4),
                   Text(
-                    '${wyjazd.strazacyIds.length} osób',
+                    '${wyjazd.liczbaStrazakow} osób',
                     style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                   ),
                 ],
@@ -289,14 +331,30 @@ class _EkranListyWyjazdowState extends State<EkranListyWyjazdow> {
       query = query.where('kategoria', isEqualTo: _wybranaKategoria!.name);
     }
 
-    // Filtruj po roku
-    if (_wybranyRok != null) {
-      final startOfYear = DateTime(_wybranyRok!, 1, 1);
-      final endOfYear = DateTime(_wybranyRok! + 1, 1, 1);
-      
+    // Filtruj po roku / bieżącym kwartale
+    DateTime? start;
+    DateTime? end;
+
+    if (_filtrBiezacyKwartal) {
+      final now = DateTime.now();
+      final kwartal = ((now.month - 1) ~/ 3) + 1;
+      final startMonth = (kwartal - 1) * 3 + 1;
+      start = DateTime(now.year, startMonth, 1);
+      final nextStartMonth = startMonth + 3;
+      if (nextStartMonth > 12) {
+        end = DateTime(now.year + 1, 1, 1);
+      } else {
+        end = DateTime(now.year, nextStartMonth, 1);
+      }
+    } else if (_wybranyRok != null) {
+      start = DateTime(_wybranyRok!, 1, 1);
+      end = DateTime(_wybranyRok! + 1, 1, 1);
+    }
+
+    if (start != null && end != null) {
       query = query
-          .where('dataWyjazdu', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfYear))
-          .where('dataWyjazdu', isLessThan: Timestamp.fromDate(endOfYear));
+          .where('dataWyjazdu', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+          .where('dataWyjazdu', isLessThan: Timestamp.fromDate(end));
     }
 
     return query.limit(100).snapshots().map((snapshot) {
@@ -322,14 +380,13 @@ class _EkranListyWyjazdowState extends State<EkranListyWyjazdow> {
             mainAxisSize: MainAxisSize.min,
             children: [
               _buildInfoRow('Kategoria', wyjazd.kategoria.nazwa),
-              _buildInfoRow('Status', wyjazd.status.nazwa),
               _buildInfoRow(
                 'Data',
                 '${wyjazd.dataWyjazdu.day}.${wyjazd.dataWyjazdu.month}.${wyjazd.dataWyjazdu.year}',
               ),
               if (wyjazd.opis.isNotEmpty) _buildInfoRow('Opis', wyjazd.opis),
-              if (wyjazd.strazacyIds.isNotEmpty)
-                _buildInfoRow('Liczba strażaków', '${wyjazd.strazacyIds.length}'),
+              if (wyjazd.liczbaStrazakow > 0)
+                _buildInfoRow('Liczba strażaków', '${wyjazd.liczbaStrazakow}'),
               if (wyjazd.czasTrwaniaMinuty > 0)
                 _buildInfoRow(
                   'Czas trwania',

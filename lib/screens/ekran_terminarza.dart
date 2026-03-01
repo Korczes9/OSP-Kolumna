@@ -21,6 +21,7 @@ class _EkranTerminarzaState extends State<EkranTerminarza> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Terminarz OSP'),
@@ -51,7 +52,7 @@ class _EkranTerminarzaState extends State<EkranTerminarza> {
         children: [
           // Wybór miesiąca
           Container(
-            color: Colors.orange[50],
+            color: isDark ? Colors.orange[900] : Colors.orange[50],
             padding: const EdgeInsets.all(16),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -176,32 +177,6 @@ class _EkranTerminarzaState extends State<EkranTerminarza> {
     });
   }
 
-  Future<void> _zapisz(String wydarzenieId) async {
-    try {
-      await _firestore.collection('wydarzenia').doc(wydarzenieId).update({
-        'uczestnicyIds': FieldValue.arrayUnion([widget.aktualnyStrazak.id]),
-      });
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Zapisano na wydarzenie'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Błąd: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
   Future<void> _pokazListeUczestnikow(Wydarzenie wydarzenie) async {
     // Pobierz dane strażaków
     final strazacySnapshot = await _firestore
@@ -263,19 +238,53 @@ class _EkranTerminarzaState extends State<EkranTerminarza> {
     );
   }
 
-  Future<void> _wypisz(String wydarzenieId) async {
+  Future<void> _ustawStatusWydarzeniaId(String wydarzenieId, String? status) async {
     try {
-      await _firestore.collection('wydarzenia').doc(wydarzenieId).update({
-        'uczestnicyIds': FieldValue.arrayRemove([widget.aktualnyStrazak.id]),
+      final docRef = _firestore.collection('wydarzenia').doc(wydarzenieId);
+      final userId = widget.aktualnyStrazak.id;
+
+      // Najpierw usuń użytkownika ze wszystkich list
+      await docRef.update({
+        'uczestnicyIds': FieldValue.arrayRemove([userId]),
+        'nieBedzieIds': FieldValue.arrayRemove([userId]),
+        'jeszczeNieWiemIds': FieldValue.arrayRemove([userId]),
       });
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Wypisano z wydarzenia'),
-            backgroundColor: Colors.orange,
-          ),
-        );
+
+      // Następnie dodaj do wybranej listy (jeśli podano status)
+      if (status != null) {
+        String komunikat;
+        Map<String, dynamic> update = {};
+
+        if (status == 'bedzie') {
+          update['uczestnicyIds'] = FieldValue.arrayUnion([userId]);
+          komunikat = 'Zaznaczono: będę na wydarzeniu';
+        } else if (status == 'nie_bedzie') {
+          update['nieBedzieIds'] = FieldValue.arrayUnion([userId]);
+          komunikat = 'Zaznaczono: nie będzie mnie';
+        } else {
+          update['jeszczeNieWiemIds'] = FieldValue.arrayUnion([userId]);
+          komunikat = 'Zaznaczono: jeszcze nie wiem';
+        }
+
+        await docRef.update(update);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(komunikat),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Wyczyszczono Twój status na wydarzeniu'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -290,7 +299,10 @@ class _EkranTerminarzaState extends State<EkranTerminarza> {
   }
 
   Widget _buildWydarzenieCard(Wydarzenie wydarzenie) {
-    final czyJestZapisany = wydarzenie.uczestnicyIds.contains(widget.aktualnyStrazak.id);
+    final userId = widget.aktualnyStrazak.id;
+    final czyJestZapisany = wydarzenie.uczestnicyIds.contains(userId);
+    final czyNieBedzie = wydarzenie.nieBedzieIds.contains(userId);
+    final czyJeszczeNieWiem = wydarzenie.jeszczeNieWiemIds.contains(userId);
     
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -371,41 +383,75 @@ class _EkranTerminarzaState extends State<EkranTerminarza> {
                 : null,
             isThreeLine: true,
           ),
-          // Przyciski zapisu/wypisu i lista uczestników
+          // Status obecności i lista uczestników
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: czyJestZapisany
-                      ? OutlinedButton.icon(
-                          onPressed: () => _wypisz(wydarzenie.id),
-                          icon: const Icon(Icons.person_remove),
-                          label: const Text('Wypisz się'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.red,
-                          ),
-                        )
-                      : ElevatedButton.icon(
-                          onPressed: () => _zapisz(wydarzenie.id),
-                          icon: const Icon(Icons.person_add),
-                          label: const Text('Zapisz się'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            foregroundColor: Colors.white,
-                          ),
-                        ),
-                ),
-                const SizedBox(width: 8),
-                if (wydarzenie.uczestnicyIds.isNotEmpty)
-                  IconButton(
-                    onPressed: () => _pokazListeUczestnikow(wydarzenie),
-                    icon: Badge(
-                      label: Text('${wydarzenie.uczestnicyIds.length}'),
-                      child: const Icon(Icons.people),
+                Row(
+                  children: [
+                    Icon(Icons.people, size: 14, color: Colors.grey[600]),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${wydarzenie.uczestnicyIds.length} zapisanych',
+                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
                     ),
-                    tooltip: 'Zobacz uczestników',
-                  ),
+                    const Spacer(),
+                    if (wydarzenie.uczestnicyIds.isNotEmpty)
+                      IconButton(
+                        onPressed: () => _pokazListeUczestnikow(wydarzenie),
+                        icon: Badge(
+                          label: Text('${wydarzenie.uczestnicyIds.length}'),
+                          child: const Icon(Icons.people),
+                        ),
+                        tooltip: 'Zobacz uczestników',
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Twój status:',
+                  style: TextStyle(fontSize: 12, color: Colors.black54),
+                ),
+                const SizedBox(height: 4),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    ChoiceChip(
+                      label: const Text('Będę'),
+                      selected: czyJestZapisany,
+                      onSelected: (selected) =>
+                          _ustawStatusWydarzeniaId(wydarzenie.id, selected ? 'bedzie' : null),
+                      selectedColor: Colors.green,
+                      labelStyle: TextStyle(
+                        color: czyJestZapisany ? Colors.white : Colors.black,
+                      ),
+                    ),
+                    ChoiceChip(
+                      label: const Text('Nie będzie mnie'),
+                      selected: czyNieBedzie,
+                      onSelected: (selected) => _ustawStatusWydarzeniaId(
+                          wydarzenie.id, selected ? 'nie_bedzie' : null),
+                      selectedColor: Colors.red,
+                      labelStyle: TextStyle(
+                        color: czyNieBedzie ? Colors.white : Colors.black,
+                      ),
+                    ),
+                    ChoiceChip(
+                      label: const Text('Jeszcze nie wiem'),
+                      selected: czyJeszczeNieWiem,
+                      onSelected: (selected) => _ustawStatusWydarzeniaId(
+                          wydarzenie.id, selected ? 'nie_wiem' : null),
+                      selectedColor: Colors.orange,
+                      labelStyle: TextStyle(
+                        color:
+                            czyJeszczeNieWiem ? Colors.white : Colors.black,
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),

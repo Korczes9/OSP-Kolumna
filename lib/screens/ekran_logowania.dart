@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/serwis_autentykacji.dart';
+import '../services/serwis_autentykacji_nowy.dart';
 import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -26,21 +26,22 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _loading = true);
 
     final result = await _authService.login(
-      email: _kontrolerEmail.text,
+      email: _kontrolerEmail.text.trim(),
       password: _kontrolerHaslo.text,
     );
 
     if (!mounted) return;
 
-    if (result) {
+    setState(() => _loading = false);
+
+    if (result['success'] == true) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const HomeScreen()),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Błąd logowania. Spróbuj ponownie.')),
+        SnackBar(content: Text(result['error'] ?? 'Błąd logowania. Spróbuj ponownie.')),
       );
-      setState(() => _loading = false);
     }
   }
 

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../services/serwis_raportow_pdf.dart';
 
+enum TypOkresuRaportu { miesiac, kwartal, rok }
+
 class EkranRaportowPDF extends StatefulWidget {
   const EkranRaportowPDF({super.key});
 
@@ -100,32 +102,64 @@ class _EkranRaportowPDFState extends State<EkranRaportowPDF> {
   }
 
   void _pokazDialogEkwiwalentow() {
-    DateTime wybranyMiesiac = DateTime(DateTime.now().year, DateTime.now().month);
+    DateTime wybranaData = DateTime(DateTime.now().year, DateTime.now().month);
+    TypOkresuRaportu typOkresu = TypOkresuRaportu.miesiac;
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setStateDialog) => AlertDialog(
-          title: const Text('Raport miesięczny ekwiwalentów'),
+          title: const Text('Raport ekwiwalentów'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: DropdownButtonFormField<TypOkresuRaportu>(
+                      value: typOkresu,
+                      decoration: const InputDecoration(
+                        labelText: 'Okres',
+                        prefixIcon: Icon(Icons.filter_alt),
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: TypOkresuRaportu.miesiac,
+                          child: Text('Miesiąc'),
+                        ),
+                        DropdownMenuItem(
+                          value: TypOkresuRaportu.kwartal,
+                          child: Text('Kwartał'),
+                        ),
+                        DropdownMenuItem(
+                          value: TypOkresuRaportu.rok,
+                          child: Text('Rok'),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          setStateDialog(() => typOkresu = value);
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
               ListTile(
-                title: const Text('Miesiąc'),
-                subtitle: Text(
-                  '${_nazwyMiesiecy[wybranyMiesiac.month - 1]} ${wybranyMiesiac.year}',
-                ),
+                title: const Text('Okres referencyjny'),
+                subtitle: Text(_opisOkresuDlaUI(typOkresu, wybranaData)),
                 trailing: const Icon(Icons.calendar_today),
                 onTap: () async {
                   final wybrana = await showDatePicker(
                     context: context,
-                    initialDate: wybranyMiesiac,
+                    initialDate: wybranaData,
                     firstDate: DateTime(2020),
                     lastDate: DateTime.now(),
                   );
                   if (wybrana != null) {
                     setStateDialog(() {
-                      wybranyMiesiac = wybrana;
+                      wybranaData = wybrana;
                     });
                   }
                 },
@@ -140,7 +174,7 @@ class _EkranRaportowPDFState extends State<EkranRaportowPDF> {
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context);
-                _generujRaportEkwiwalentow(wybranyMiesiac);
+                _generujRaportEkwiwalentow(typOkresu, wybranaData);
               },
               child: const Text('Generuj PDF'),
             ),
@@ -214,11 +248,41 @@ class _EkranRaportowPDFState extends State<EkranRaportowPDF> {
     );
   }
 
-  Future<void> _generujRaportEkwiwalentow(DateTime miesiac) async {
+  Future<void> _generujRaportEkwiwalentow(
+      TypOkresuRaportu typ, DateTime referencyjna) async {
+    // Wyznacz zakres dat na podstawie wybranego typu okresu
+    late DateTime od;
+    late DateTime doDaty;
+    late String opisOkresu;
+
+    switch (typ) {
+      case TypOkresuRaportu.miesiac:
+        od = DateTime(referencyjna.year, referencyjna.month, 1);
+        doDaty = DateTime(referencyjna.year, referencyjna.month + 1, 0);
+        opisOkresu =
+            '${_nazwyMiesiecy[referencyjna.month - 1]} ${referencyjna.year}';
+        break;
+      case TypOkresuRaportu.kwartal:
+        final kwartal = ((referencyjna.month - 1) ~/ 3) + 1;
+        final startMonth = (kwartal - 1) * 3 + 1;
+        final endMonth = startMonth + 2;
+        od = DateTime(referencyjna.year, startMonth, 1);
+        doDaty = DateTime(referencyjna.year, endMonth + 1, 0);
+        opisOkresu = 'Kwartał $kwartal ${referencyjna.year}';
+        break;
+      case TypOkresuRaportu.rok:
+        od = DateTime(referencyjna.year, 1, 1);
+        doDaty = DateTime(referencyjna.year, 12, 31);
+        opisOkresu = 'Rok ${referencyjna.year}';
+        break;
+    }
+
     setState(() => _generuje = true);
     try {
       await _serwisPDF.generujRaportEkwiwalentow(
-        miesiac: miesiac,
+        od: od,
+        doDaty: doDaty,
+        opisOkresu: opisOkresu,
       );
     } catch (e) {
       if (mounted) {
@@ -279,4 +343,16 @@ class _EkranRaportowPDFState extends State<EkranRaportowPDF> {
     'Listopad',
     'Grudzień',
   ];
+
+  String _opisOkresuDlaUI(TypOkresuRaportu typ, DateTime data) {
+    switch (typ) {
+      case TypOkresuRaportu.miesiac:
+        return '${_nazwyMiesiecy[data.month - 1]} ${data.year}';
+      case TypOkresuRaportu.kwartal:
+        final kwartal = ((data.month - 1) ~/ 3) + 1;
+        return 'Kwartał $kwartal ${data.year}';
+      case TypOkresuRaportu.rok:
+        return 'Rok ${data.year}';
+    }
+  }
 }

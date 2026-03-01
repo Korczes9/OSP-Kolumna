@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -6,28 +8,27 @@ import '../models/wyjazd.dart';
 import '../models/strazak.dart';
 import '../models/sprzet.dart';
 
-/// Serwis do generowania raportów PDF
+  /// Serwis do generowania raportów PDF
 class SerwisRaportowPDF {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   
-  /// Generuj raport miesięczny ekwiwalentów
+  /// Generuj raport ekwiwalentów za dowolny okres
   Future<void> generujRaportEkwiwalentow({
-    required DateTime miesiac,
+    required DateTime od,
+    required DateTime doDaty,
+    String? opisOkresu,
   }) async {
     // Załaduj font obsługujący polskie znaki
     final polishFont = await PdfGoogleFonts.robotoRegular();
     final polishFontBold = await PdfGoogleFonts.robotoBold();
     
-    final poczatekMiesiaca = DateTime(miesiac.year, miesiac.month, 1);
-    final koniecMiesiaca = DateTime(miesiac.year, miesiac.month + 1, 0);
-
-    // Pobierz wyjazdy z miesiąca
+    // Pobierz wyjazdy z okresu
     final wyjazdySnapshot = await _firestore
         .collection('wyjazdy')
-        .where('dataWyjazdu',
-            isGreaterThanOrEqualTo: Timestamp.fromDate(poczatekMiesiaca))
-        .where('dataWyjazdu',
-            isLessThanOrEqualTo: Timestamp.fromDate(koniecMiesiaca))
+      .where('dataWyjazdu',
+        isGreaterThanOrEqualTo: Timestamp.fromDate(od))
+      .where('dataWyjazdu',
+        isLessThanOrEqualTo: Timestamp.fromDate(doDaty))
         .get();
 
     final wyjazdy = wyjazdySnapshot.docs
@@ -46,8 +47,18 @@ class SerwisRaportowPDF {
 
     for (var wyjazd in wyjazdy) {
       if (wyjazd.ekwiwalent > 0) {
-        // Uwzględnij wszystkich uczestników
-        for (var strazakId in wyjazd.strazacyIds) {
+        // Zbierz wszystkich unikalnych uczestników z wszystkich list
+        final uczestnicy = <String>{};
+        
+        // Stary system - jedno pole
+        uczestnicy.addAll(wyjazd.strazacyIds);
+        
+        // Nowy system - dwa wozy
+        uczestnicy.addAll(wyjazd.woz1StrazacyIds);
+        uczestnicy.addAll(wyjazd.woz2StrazacyIds);
+        
+        // Oblicz ekwiwalenty dla każdego uczestnika
+        for (var strazakId in uczestnicy) {
           ekwiwalentyPerStrazak[strazakId] =
               (ekwiwalentyPerStrazak[strazakId] ?? 0) + wyjazd.ekwiwalent;
           wyjazdyPerStrazak[strazakId] =
@@ -55,6 +66,14 @@ class SerwisRaportowPDF {
         }
       }
     }
+
+      // Suma i najwyższy ekwiwalent (do wyświetlenia w podsumowaniu)
+      final sumaEkwiwalentow = ekwiwalentyPerStrazak.values
+        .fold<double>(0, (sum, val) => sum + val);
+      final najwyzszyEkwiwalent = ekwiwalentyPerStrazak.values.isEmpty
+        ? 0.0
+        : ekwiwalentyPerStrazak.values
+          .reduce((a, b) => math.max(a, b));
 
     // Twórz PDF
     final pdf = pw.Document();
@@ -74,7 +93,7 @@ class SerwisRaportowPDF {
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 pw.Text(
-                  'RAPORT MIESIĘCZNY EKWIWALENTÓW',
+                  'RAPORT EKWIWALENTÓW',
                   style: pw.TextStyle(
                     fontSize: 20,
                     fontWeight: pw.FontWeight.bold,
@@ -86,7 +105,7 @@ class SerwisRaportowPDF {
                   style: const pw.TextStyle(fontSize: 14),
                 ),
                 pw.Text(
-                  'Okres: ${_formatujMiesiac(miesiac)}',
+                  'Okres: ${opisOkresu ?? '${_formatujDate(od)} - ${_formatujDate(doDaty)}'}',
                   style: const pw.TextStyle(fontSize: 12),
                 ),
                 pw.Divider(thickness: 2),
@@ -109,11 +128,17 @@ class SerwisRaportowPDF {
                 _buildStatPdf('Liczba wyjazdów', wyjazdy.length.toString()),
                 _buildStatPdf(
                   'Suma ekwiwalentów',
-                  '${ekwiwalentyPerStrazak.values.fold<double>(0, (sum, val) => sum + val).toStringAsFixed(2)} PLN',
+                  '${sumaEkwiwalentow.toStringAsFixed(2)} PLN',
                 ),
                 _buildStatPdf(
                   'Liczba strażaków',
                   ekwiwalentyPerStrazak.length.toString(),
+                ),
+                _buildStatPdf(
+                  'Najwyższy ekwiwalent',
+                  ekwiwalentyPerStrazak.isEmpty
+                      ? '0,00 PLN'
+                      : '${najwyzszyEkwiwalent.toStringAsFixed(2)} PLN',
                 ),
               ],
             ),
@@ -143,35 +168,34 @@ class SerwisRaportowPDF {
               ),
 
               // Wiersze danych
-              ...ekwiwalentyPerStrazak.entries
-                  .toList()
-                  .asMap()
-                  .entries
-                  .map((entry) {
-                final index = entry.key;
-                final strazakId = entry.value.key;
-                final ekwiwalent = entry.value.value;
+              ...(() {
+                // Pomiń wpisy dla strażaków, których konta już nie ma,
+                // żeby nie pokazywać ich jako "Nieznany" w raporcie
+                final posortowane = ekwiwalentyPerStrazak.entries
+                    .where((entry) =>
+                        strazacy.any((s) => s.id == entry.key))
+                    .toList()
+                  ..sort((a, b) => b.value.compareTo(a.value));
 
-                final strazak = strazacy.firstWhere(
-                  (s) => s.id == strazakId,
-                  orElse: () => Strazak(
-                    id: '',
-                    imie: 'Nieznany',
-                    nazwisko: '',
-                    email: '',
-                    numerTelefonu: '',
-                  ),
-                );
+                return posortowane.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final strazakId = entry.value.key;
+                  final ekwiwalent = entry.value.value;
 
-                return pw.TableRow(
-                  children: [
-                    _buildTableCell('${index + 1}'),
-                    _buildTableCell(strazak.pelneImie),
-                    _buildTableCell('${wyjazdyPerStrazak[strazakId] ?? 0}'),
-                    _buildTableCell(ekwiwalent.toStringAsFixed(2)),
-                  ],
-                );
-              }),
+                  final strazak = strazacy.firstWhere(
+                    (s) => s.id == strazakId,
+                  );
+
+                  return pw.TableRow(
+                    children: [
+                      _buildTableCell('${index + 1}'),
+                      _buildTableCell(strazak.pelneImie),
+                      _buildTableCell('${wyjazdyPerStrazak[strazakId] ?? 0}'),
+                      _buildTableCell(ekwiwalent.toStringAsFixed(2)),
+                    ],
+                  );
+                });
+              })(),
 
               // Suma
               pw.TableRow(
@@ -204,7 +228,7 @@ class SerwisRaportowPDF {
     // Wyświetl podgląd i pozwól na drukowanie/zapisywanie
     await Printing.layoutPdf(
       onLayout: (format) async => pdf.save(),
-      name: 'Raport_ekwiwalentow_${miesiac.year}_${miesiac.month}.pdf',
+      name: 'Raport_ekwiwalentow_${od.year}_${od.month}_${od.day}.pdf',
     );
   }
 
@@ -227,6 +251,42 @@ class SerwisRaportowPDF {
     final wyjazdy = wyjazdySnapshot.docs
         .map((doc) => Wyjazd.fromMap(doc.data(), doc.id))
         .toList();
+
+    // Pobierz wszystkie wozy strażackie dla mapowania ID -> nazwa
+    final wozySnapshot = await _firestore.collection('wozy_strazackie').get();
+    final nazwyWozow = <String, String>{};
+    for (var doc in wozySnapshot.docs) {
+      final data = doc.data();
+      final numerOperacyjny = (data['numerOperacyjny'] ??
+          data['nrOperacyjny'] ??
+          data['numer'] ??
+          data['symbol'] ??
+          '')
+        .toString();
+      // W niektórych dokumentach nazwa wozu jest w polu ":nazwa",
+      // więc uwzględniamy je w pierwszej kolejności.
+      final nazwa = (data[':nazwa'] ??
+          data['nazwa'] ??
+          data['opis'] ??
+          data['typ'] ??
+          data['model'] ??
+          data['marka'] ??
+          '')
+        .toString();
+
+      String label;
+      if (numerOperacyjny.isNotEmpty && nazwa.isNotEmpty) {
+        label = '$numerOperacyjny $nazwa';
+      } else if (numerOperacyjny.isNotEmpty) {
+        label = numerOperacyjny;
+      } else if (nazwa.isNotEmpty) {
+        label = nazwa;
+      } else {
+        label = 'Nieznany wóz';
+      }
+
+      nazwyWozow[doc.id] = label;
+    }
 
     final pdf = pw.Document();
 
@@ -266,11 +326,12 @@ class SerwisRaportowPDF {
           pw.Table(
             border: pw.TableBorder.all(color: PdfColors.grey),
             columnWidths: {
-              0: const pw.FlexColumnWidth(1),
-              1: const pw.FlexColumnWidth(2),
+              0: const pw.FlexColumnWidth(0.7),
+              1: const pw.FlexColumnWidth(1.5),
               2: const pw.FlexColumnWidth(3),
               3: const pw.FlexColumnWidth(2),
-              4: const pw.FlexColumnWidth(1),
+              4: const pw.FlexColumnWidth(2),
+              5: const pw.FlexColumnWidth(1),
             },
             children: [
               pw.TableRow(
@@ -280,19 +341,35 @@ class SerwisRaportowPDF {
                   _buildTableCell('Data', bold: true),
                   _buildTableCell('Lokalizacja', bold: true),
                   _buildTableCell('Kategoria', bold: true),
+                  _buildTableCell('Wozy', bold: true),
                   _buildTableCell('Osób', bold: true),
                 ],
               ),
               ...wyjazdy.asMap().entries.map((entry) {
                 final index = entry.key;
                 final wyjazd = entry.value;
+                
+                // Zbierz nazwy wozów
+                final wozyNazwy = <String>[];
+                if (wyjazd.wozId != null && wyjazd.wozId!.isNotEmpty) {
+                  wozyNazwy.add(nazwyWozow[wyjazd.wozId!] ?? 'Nieznany');
+                }
+                if (wyjazd.woz1Id != null && wyjazd.woz1Id!.isNotEmpty) {
+                  wozyNazwy.add(nazwyWozow[wyjazd.woz1Id!] ?? 'Nieznany');
+                }
+                if (wyjazd.woz2Id != null && wyjazd.woz2Id!.isNotEmpty) {
+                  wozyNazwy.add(nazwyWozow[wyjazd.woz2Id!] ?? 'Nieznany');
+                }
+                final wozyText = wozyNazwy.isEmpty ? '-' : wozyNazwy.join(', ');
+                
                 return pw.TableRow(
                   children: [
                     _buildTableCell('${index + 1}'),
                     _buildTableCell(_formatujDate(wyjazd.dataWyjazdu)),
                     _buildTableCell(wyjazd.lokalizacja),
                     _buildTableCell(wyjazd.kategoria.nazwa),
-                    _buildTableCell('${wyjazd.strazacyIds.length}'),
+                    _buildTableCell(wozyText),
+                    _buildTableCell('${wyjazd.liczbaStrazakow}'),
                   ],
                 );
               }),
@@ -433,23 +510,5 @@ class SerwisRaportowPDF {
 
   String _formatujDate(DateTime data) {
     return '${data.day.toString().padLeft(2, '0')}.${data.month.toString().padLeft(2, '0')}.${data.year}';
-  }
-
-  String _formatujMiesiac(DateTime data) {
-    const miesiace = [
-      'Styczeń',
-      'Luty',
-      'Marzec',
-      'Kwiecień',
-      'Maj',
-      'Czerwiec',
-      'Lipiec',
-      'Sierpień',
-      'Wrzesień',
-      'Październik',
-      'Listopad',
-      'Grudzień'
-    ];
-    return '${miesiace[data.month - 1]} ${data.year}';
   }
 }

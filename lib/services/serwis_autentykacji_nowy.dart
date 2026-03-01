@@ -397,6 +397,97 @@ class AuthService {
     }
   }
 
+  /// Zmienia hasło na podstawie emaila lub numeru telefonu oraz starego hasła
+  Future<Map<String, dynamic>> zmienHasloPrzyLogowaniu({
+    required String emailLubTelefon,
+    required String stareHaslo,
+    required String noweHaslo,
+  }) async {
+    try {
+      if (emailLubTelefon.isEmpty || stareHaslo.isEmpty || noweHaslo.isEmpty) {
+        return {
+          'success': false,
+          'error': 'Wszystkie pola są wymagane',
+        };
+      }
+
+      if (noweHaslo.length < 6) {
+        return {
+          'success': false,
+          'error': 'Nowe hasło musi mieć co najmniej 6 znaków',
+        };
+      }
+
+      // Ustal właściwy email (obsługa numeru telefonu)
+      final email = await pobierzEmailPoIdentyfikatorze(emailLubTelefon);
+      if (email == null) {
+        return {
+          'success': false,
+          'error': 'Nie znaleziono użytkownika o podanym emailu/telefonie',
+        };
+      }
+
+      // Zaloguj użytkownika starym hasłem, żeby zweryfikować tożsamość
+      final credential = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: stareHaslo,
+      );
+
+      final user = credential.user;
+      if (user == null) {
+        return {
+          'success': false,
+          'error': 'Nie udało się zweryfikować użytkownika',
+        };
+      }
+
+      // Zmień hasło
+      await user.updatePassword(noweHaslo);
+
+      // Opcjonalnie wyloguj po zmianie hasła
+      await _auth.signOut();
+
+      return {
+        'success': true,
+        'message': 'Hasło zostało zmienione. Zaloguj się nowym hasłem.',
+      };
+    } on FirebaseAuthException catch (e) {
+      debugPrint('Błąd zmiany hasła przy logowaniu: ${e.code}');
+      String errorMsg = 'Nie udało się zmienić hasła';
+
+      switch (e.code) {
+        case 'user-not-found':
+          errorMsg = 'Nie znaleziono użytkownika o tym adresie email';
+          break;
+        case 'wrong-password':
+          errorMsg = 'Stare hasło jest nieprawidłowe';
+          break;
+        case 'invalid-email':
+          errorMsg = 'Nieprawidłowy format adresu email';
+          break;
+        case 'weak-password':
+          errorMsg = 'Nowe hasło jest zbyt słabe (min. 6 znaków)';
+          break;
+        case 'too-many-requests':
+          errorMsg = 'Zbyt wiele prób. Spróbuj ponownie później.';
+          break;
+        default:
+          errorMsg = 'Błąd: ${e.message}';
+      }
+
+      return {
+        'success': false,
+        'error': errorMsg,
+      };
+    } catch (e) {
+      debugPrint('Nieoczekiwany błąd zmiany hasła: $e');
+      return {
+        'success': false,
+        'error': 'Nieoczekiwany błąd: $e',
+      };
+    }
+  }
+
   /// Usuwa strażaka (soft delete - dezaktywacja)
   Future<bool> usunStrazaka(String uid) async {
     try {

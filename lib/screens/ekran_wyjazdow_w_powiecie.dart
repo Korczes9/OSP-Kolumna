@@ -15,8 +15,9 @@ class EkranWyjazdowWPowiecie extends StatefulWidget {
 }
 
 class _EkranWyjazdowWPowiecieState extends State<EkranWyjazdowWPowiecie> {
-    static const String _discordBotToken =
-      String.fromEnvironment('DISCORD_BOT_TOKEN', defaultValue: '');
+  // Token bota Discord NIE powinien być trzymany w repozytorium.
+  // Użyj bezpiecznego źródła (np. zmienne środowiskowe / backend).
+  static const String _discordBotToken = '';
   static const String _discordChannelId = '1193142209470533733';
 
   List<Map<String, dynamic>> _wiadomosci = [];
@@ -109,6 +110,7 @@ class _EkranWyjazdowWPowiecieState extends State<EkranWyjazdowWPowiecie> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     // Sprawdź, czy użytkownik ma rolę Pro
     if (!widget.aktualnyStrazak.jestPro) {
       return Scaffold(
@@ -161,7 +163,7 @@ class _EkranWyjazdowWPowiecieState extends State<EkranWyjazdowWPowiecie> {
           // Informacja o funkcji
           Container(
             padding: const EdgeInsets.all(16),
-            color: Colors.blue[50],
+            color: isDark ? Colors.blue[900] : Colors.blue[50],
             child: Row(
               children: [
                 Icon(Icons.discord, color: Colors.blue[700], size: 28),

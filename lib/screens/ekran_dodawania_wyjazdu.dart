@@ -6,6 +6,7 @@ import '../models/wyjazd.dart';
 import '../models/strazak.dart';
 import '../services/serwis_wyjazdow.dart';
 import '../services/serwis_autentykacji_nowy.dart';
+import '../services/serwis_ekwiwalentow.dart';
 
 const String _googleApiKey = 'AIzaSyAqTJGSPMNS5jAquRA6oQlLq8Y6DHOKYK0';
 
@@ -87,14 +88,14 @@ class _EkranDodawaniaWyjazduState extends State<EkranDodawaniaWyjazdu> {
       case KategoriaWyjazdu.pozar:
       case KategoriaWyjazdu.miejscoweZagrozenie:
       case KategoriaWyjazdu.alarmFalszywy:
-        stawka = 19.0;
+        stawka = SerwisEkwiwalentow.stawkaPozarMiejscoweAlarm;
         break;
       case KategoriaWyjazdu.zabezpieczenieRejonu:
       case KategoriaWyjazdu.zPoleceniaBurmistrza:
-        stawka = 9.0;
+        stawka = SerwisEkwiwalentow.stawkaZabezpieczeniePolecenie;
         break;
       case KategoriaWyjazdu.cwiczenia:
-        stawka = 6.0;
+        stawka = SerwisEkwiwalentow.stawkaCwiczenia;
         break;
     }
     
@@ -664,15 +665,6 @@ class _EkranDodawaniaWyjazduState extends State<EkranDodawaniaWyjazdu> {
                           title: Text(wyjazd.lokalizacja),
                           subtitle: Text(
                             '${wyjazd.kategoria.nazwa} • ${wyjazd.dataWyjazdu.day}.${wyjazd.dataWyjazdu.month}.${wyjazd.dataWyjazdu.year}',
-                          ),
-                          trailing: Chip(
-                            label: Text(
-                              wyjazd.status.nazwa,
-                              style: const TextStyle(fontSize: 11),
-                            ),
-                            backgroundColor: wyjazd.status == StatusWyjazdu.oczekujacy
-                                ? Colors.green[100]
-                                : Colors.grey[200],
                           ),
                         ),
                       );

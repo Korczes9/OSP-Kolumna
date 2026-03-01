@@ -14,6 +14,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -39,15 +40,16 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
-    
-    applicationVariants.all {
-        outputs.all {
-            val versionName = flutter.versionName
-            (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl).outputFileName = "OSP-Kolumna-v${versionName}.apk"
-        }
-    }
 }
 
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+    implementation("androidx.appcompat:appcompat:1.6.1")
+    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
+    implementation("com.google.firebase:firebase-firestore")
+}
 
 flutter {
     source = "../.."

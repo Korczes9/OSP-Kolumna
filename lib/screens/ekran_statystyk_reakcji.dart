@@ -30,16 +30,49 @@ class _EkranStatystykReakcjiState extends State<EkranStatystykReakcji> {
     _zaladujStatystyki();
   }
 
+  DateTime? _parseCzas(dynamic value) {
+    if (value == null) return null;
+
+    if (value is Timestamp) {
+      return value.toDate();
+    }
+
+    if (value is String) {
+      try {
+        return DateTime.parse(value);
+      } catch (_) {
+        return null;
+      }
+    }
+
+    return null;
+  }
+
+  double? _parseDouble(dynamic value) {
+    if (value == null) return null;
+
+    if (value is num) {
+      return value.toDouble();
+    }
+
+    if (value is String) {
+      return double.tryParse(value);
+    }
+
+    return null;
+  }
+
   Future<void> _zaladujStatystyki() async {
     setState(() => _ladowanie = true);
 
     try {
-      // Pobierz wszystkie wyjazdy
+      // Pobierz wszystkie wyjazdy (bez limitu, aby mieć pełny obraz)
       final wyjazdySnapshot = await _firestore
           .collection('wyjazdy')
           .orderBy('utworzonoO', descending: true)
-          .limit(100)
           .get();
+
+      debugPrint('📊 Pobrano ${wyjazdySnapshot.docs.length} wyjazdów do analizy statystyk reakcji');
 
       // Pobierz wszystkich strażaków (tylko aktywnych)
       final strazacySnapshot = await _firestore
@@ -68,12 +101,22 @@ class _EkranStatystykReakcjiState extends State<EkranStatystykReakcji> {
       }
 
       int liczbWyjazdow = 0;
+      int liczbaOdpowiedzi = 0;
 
       // Analizuj każdy wyjazd
       for (var wyjazdDoc in wyjazdySnapshot.docs) {
-        liczbWyjazdow++;
         final wyjazdData = wyjazdDoc.data();
-        final DateTime czasAlarmu = (wyjazdData['utworzonoO'] as Timestamp).toDate();
+
+        // Jeśli brakuje pola utworzonoO lub ma zły format - pomiń wyjazd
+        if (wyjazdData['utworzonoO'] == null ||
+            wyjazdData['utworzonoO'] is! Timestamp) {
+          debugPrint('⚠️ Pomijam wyjazd ${wyjazdDoc.id} - brak lub zły format pola utworzonoO');
+          continue;
+        }
+
+        liczbWyjazdow++;
+        final DateTime czasAlarmu =
+            (wyjazdData['utworzonoO'] as Timestamp).toDate();
 
         // Pobierz odpowiedzi strażaków
         final odpowiedziSnapshot = await _firestore
@@ -81,6 +124,9 @@ class _EkranStatystykReakcjiState extends State<EkranStatystykReakcji> {
             .doc(wyjazdDoc.id)
             .collection('odpowiedzi')
             .get();
+
+        debugPrint('  📋 Wyjazd ${wyjazdDoc.id}: ${odpowiedziSnapshot.docs.length} odpowiedzi');
+        liczbaOdpowiedzi += odpowiedziSnapshot.docs.length;
 
         // Pobierz rzeczywistych uczestników
         final uczestnicy1 = (wyjazdData['strazacyIds'] as List<dynamic>?) ?? [];
@@ -91,105 +137,104 @@ class _EkranStatystykReakcjiState extends State<EkranStatystykReakcji> {
         for (var odpDoc in odpowiedziSnapshot.docs) {
           final strazakId = odpDoc.id;
           final odpData = odpDoc.data();
-          final status = odpData['status'] ?? '';
-          
-          // Jeśli strażak nie jest w mapie, dodaj go (może być nieaktywny lub usunięty)
-          if (!statystykiMap.containsKey(strazakId)) {
-            // Spróbuj pobrać dane strażaka
-            try {
-              final strazakDoc = await _firestore.collection('strazacy').doc(strazakId).get();
-              if (strazakDoc.exists) {
-                final strazakData = strazakDoc.data()!;
-                statystykiMap[strazakId] = {
-                  'id': strazakId,
-                  'imie': strazakData['imie'] ?? '',
-                  'nazwisko': strazakData['nazwisko'] ?? '',
-                  'pelneImie': '${strazakData['imie'] ?? 'Nieznany'} ${strazakData['nazwisko'] ?? 'Strażak'}',
-                  'liczbaPotwierdzen': 0,
-                  'liczbaJadze': 0,
-                  'liczbaObecnosci': 0,
-                  'czasReakcjiLista': <int>[],
-                  'czasDotarciaLista': <int>[],
-                  'dystanseLista': <double>[],
-                  'predkosciLista': <double>[],
-                };
-              } else {
-                // Strażak nie istnieje w bazie
-                statystykiMap[strazakId] = {
-                  'id': strazakId,
-                  'imie': 'Nieznany',
-                  'nazwisko': 'Strażak',
-                  'pelneImie': 'Nieznany Strażak (ID: ${strazakId.substring(0, 8)})',
-                  'liczbaPotwierdzen': 0,
-                  'liczbaJadze': 0,
-                  'liczbaObecnosci': 0,
-                  'czasReakcjiLista': <int>[],
-                  'czasDotarciaLista': <int>[],
-                  'dystanseLista': <double>[],
-                  'predkosciLista': <double>[],
-                };
+
+          try {
+            final status = odpData['status'] ?? '';
+
+            // Jeśli strażak nie jest w mapie, dodaj go (może być nieaktywny lub usunięty)
+            if (!statystykiMap.containsKey(strazakId)) {
+              try {
+                final strazakDoc = await _firestore.collection('strazacy').doc(strazakId).get();
+                if (strazakDoc.exists) {
+                  final strazakData = strazakDoc.data()!;
+                  statystykiMap[strazakId] = {
+                    'id': strazakId,
+                    'imie': strazakData['imie'] ?? '',
+                    'nazwisko': strazakData['nazwisko'] ?? '',
+                    'pelneImie': '${strazakData['imie'] ?? 'Nieznany'} ${strazakData['nazwisko'] ?? 'Strażak'}',
+                    'liczbaPotwierdzen': 0,
+                    'liczbaJadze': 0,
+                    'liczbaObecnosci': 0,
+                    'czasReakcjiLista': <int>[],
+                    'czasDotarciaLista': <int>[],
+                    'dystanseLista': <double>[],
+                    'predkosciLista': <double>[],
+                  };
+                } else {
+                  statystykiMap[strazakId] = {
+                    'id': strazakId,
+                    'imie': 'Nieznany',
+                    'nazwisko': 'Strażak',
+                    'pelneImie': 'Nieznany Strażak (ID: ${strazakId.substring(0, 8)})',
+                    'liczbaPotwierdzen': 0,
+                    'liczbaJadze': 0,
+                    'liczbaObecnosci': 0,
+                    'czasReakcjiLista': <int>[],
+                    'czasDotarciaLista': <int>[],
+                    'dystanseLista': <double>[],
+                    'predkosciLista': <double>[],
+                  };
+                }
+              } catch (e) {
+                debugPrint('⚠️ Błąd pobierania danych strażaka $strazakId: $e');
+                continue;
               }
-            } catch (e) {
-              debugPrint('⚠️ Błąd pobierania danych strażaka $strazakId: $e');
-              continue;
             }
-          }
-          
-          // Zwiększ liczbę potwierdzeń
-          statystykiMap[strazakId]!['liczbaPotwierdzen']++;
-          
-          if (status == 'jadę') {
-            statystykiMap[strazakId]!['liczbaJadze']++;
-          }
 
-          // Sprawdź czy był rzeczywiście obecny
-          if (wszyscyUczestnicy.contains(strazakId)) {
-            statystykiMap[strazakId]!['liczbaObecnosci']++;
-          }
+            // Zwiększ liczbę potwierdzeń
+            statystykiMap[strazakId]!['liczbaPotwierdzen']++;
 
-          // Oblicz czas reakcji
-          final czasOdpowiedziStr = odpData['czasOdpowiedzi'];
-          if (czasOdpowiedziStr != null) {
-            final czasOdpowiedzi = DateTime.parse(czasOdpowiedziStr);
-            final czasReakcji = czasOdpowiedzi.difference(czasAlarmu).inSeconds;
-            
-            if (czasReakcji > 0 && czasReakcji < 3600) { // maksymalnie 1 godzina
-              statystykiMap[strazakId]!['czasReakcjiLista'].add(czasReakcji);
+            if (status == 'jadę') {
+              statystykiMap[strazakId]!['liczbaJadze']++;
             }
-          }
 
-          // Oblicz czas dotarcia i dystans
-          final czasDotarciaStr = odpData['czasDotarcia'];
-          final lat = odpData['lokalizacjaLat'];
-          final lon = odpData['lokalizacjaLon'];
-          
-          if (czasDotarciaStr != null) {
-            final czasDotarcia = DateTime.parse(czasDotarciaStr);
-            final czasDojazdu = czasDotarcia.difference(czasAlarmu).inSeconds;
-            
-            if (czasDojazdu > 0 && czasDojazdu < 3600) {
-              statystykiMap[strazakId]!['czasDotarciaLista'].add(czasDojazdu);
+            // Sprawdź czy był rzeczywiście obecny
+            if (wszyscyUczestnicy.contains(strazakId)) {
+              statystykiMap[strazakId]!['liczbaObecnosci']++;
             }
-          }
 
-          if (lat != null && lon != null) {
-            // Oblicz dystans od pozycji alarmu do OSP
-            final dystans = Geolocator.distanceBetween(lat, lon, _ospLat, _ospLon) / 1000; // km
-            statystykiMap[strazakId]!['dystanseLista'].add(dystans);
-            
-            // Oblicz prędkość (jeśli jest czas dotarcia i odpowiedzi)
-            if (czasDotarciaStr != null && czasOdpowiedziStr != null) {
-              final czasDotarcia = DateTime.parse(czasDotarciaStr);
-              final czasOdp = DateTime.parse(czasOdpowiedziStr);
-              final czasDojazdu = czasDotarcia.difference(czasOdp).inMinutes;
-              
-              if (czasDojazdu > 0) {
-                final predkosc = (dystans / czasDojazdu) * 60; // km/h
-                if (predkosc > 0 && predkosc < 200) { // realistyczna prędkość
-                  statystykiMap[strazakId]!['predkosciLista'].add(predkosc);
+            // Oblicz czas reakcji
+            final czasOdpowiedziRaw = odpData['czasOdpowiedzi'];
+            final czasOdpowiedzi = _parseCzas(czasOdpowiedziRaw);
+            if (czasOdpowiedzi != null) {
+              final czasReakcji = czasOdpowiedzi.difference(czasAlarmu).inSeconds;
+
+              if (czasReakcji > 0 && czasReakcji < 3600) {
+                statystykiMap[strazakId]!['czasReakcjiLista'].add(czasReakcji);
+              }
+            }
+
+            // Oblicz czas dotarcia i dystans
+            final czasDotarciaRaw = odpData['czasDotarcia'];
+            final czasDotarcia = _parseCzas(czasDotarciaRaw);
+            final lat = _parseDouble(odpData['lokalizacjaLat']);
+            final lon = _parseDouble(odpData['lokalizacjaLon']);
+
+            if (czasDotarcia != null) {
+              final czasDojazdu = czasDotarcia.difference(czasAlarmu).inSeconds;
+
+              if (czasDojazdu > 0 && czasDojazdu < 3600) {
+                statystykiMap[strazakId]!['czasDotarciaLista'].add(czasDojazdu);
+              }
+            }
+
+            if (lat != null && lon != null) {
+              final dystans = Geolocator.distanceBetween(lat, lon, _ospLat, _ospLon) / 1000;
+              statystykiMap[strazakId]!['dystanseLista'].add(dystans);
+
+              if (czasDotarcia != null && czasOdpowiedzi != null) {
+                final czasDojazduMinuty = czasDotarcia.difference(czasOdpowiedzi).inMinutes;
+
+                if (czasDojazduMinuty > 0) {
+                  final predkosc = (dystans / czasDojazduMinuty) * 60;
+                  if (predkosc > 0 && predkosc < 200) {
+                    statystykiMap[strazakId]!['predkosciLista'].add(predkosc);
+                  }
                 }
               }
             }
+          } catch (e) {
+            debugPrint('⚠️ Błąd przetwarzania odpowiedzi $strazakId w wyjeździe ${wyjazdDoc.id}: $e');
           }
         }
       }
@@ -266,6 +311,12 @@ class _EkranStatystykReakcjiState extends State<EkranStatystykReakcji> {
         _ladowanie = false;
       });
 
+      debugPrint('✅ Statystyki załadowane:');
+      debugPrint('  • Liczba wyjazdów: $liczbWyjazdow');
+      debugPrint('  • Liczba odpowiedzi: $liczbaOdpowiedzi');
+      debugPrint('  • Strażaków z danymi: ${statystyki.length}');
+      debugPrint('  • Średni czas reakcji: ${wszystkieCzasyReakcji.isEmpty ? "brak danych" : "${(wszystkieCzasyReakcji.reduce((a, b) => a + b) / wszystkieCzasyReakcji.length).toStringAsFixed(1)}s"}');
+
     } catch (e) {
       debugPrint('❌ Błąd ładowania statystyk reakcji: $e');
       setState(() => _ladowanie = false);
@@ -332,9 +383,12 @@ class _EkranStatystykReakcjiState extends State<EkranStatystykReakcji> {
   Widget _buildStatystykiOgolne() {
     final sredniReakcja = _statystykiOgolne['sredniCzasReakcjiOgolny'];
     final sredniDotarcie = _statystykiOgolne['sredniCzasDotarciaOgolny'];
+    final liczbaWyjazdow = _statystykiOgolne['liczbaWyjazdow'] ?? 0;
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Card(
-      color: Colors.blue[50],
+      color: isDark ? Colors.blue[900] : Colors.blue[50],
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -353,7 +407,7 @@ class _EkranStatystykReakcjiState extends State<EkranStatystykReakcji> {
             const SizedBox(height: 16),
             _buildStatWiersz(
               'Przeanalizowano wyjazdów',
-              '${_statystykiOgolne['liczbaWyjazdow']}',
+              '$liczbaWyjazdow',
               Icons.local_fire_department,
             ),
             if (sredniReakcja != null) ...[
@@ -363,6 +417,13 @@ class _EkranStatystykReakcjiState extends State<EkranStatystykReakcji> {
                 _formatujCzas(sredniReakcja),
                 Icons.timer,
               ),
+            ] else if (liczbaWyjazdow > 0) ...[
+              const Divider(),
+              _buildStatWiersz(
+                'Średni czas reakcji',
+                'Brak danych',
+                Icons.timer,
+              ),
             ],
             if (sredniDotarcie != null) ...[
               const Divider(),
@@ -370,6 +431,36 @@ class _EkranStatystykReakcjiState extends State<EkranStatystykReakcji> {
                 'Średni czas dotarcia',
                 _formatujCzas(sredniDotarcie),
                 Icons.access_time,
+              ),
+            ] else if (liczbaWyjazdow > 0) ...[
+              const Divider(),
+              _buildStatWiersz(
+                'Średni czas dotarcia',
+                'Brak danych',
+                Icons.access_time,
+              ),
+            ],
+            if (_statystykiStrazakow.isEmpty && liczbaWyjazdow > 0) ...[
+              const Divider(),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.orange[900] : Colors.orange[100],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.orange[900]),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Brak danych o reakcjach strażaków. Upewnij się, że strażacy potwierdzają alarmy w aplikacji.',
+                        style: TextStyle(color: Colors.orange[900], fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ],

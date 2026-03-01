@@ -6,6 +6,7 @@ import '../models/wyjazd.dart';
 import '../models/strazak.dart';
 import '../services/serwis_wyjazdow.dart';
 import '../services/serwis_autentykacji_nowy.dart';
+import '../services/serwis_ekwiwalentow.dart';
 
 const String _googleApiKey = 'AIzaSyAqTJGSPMNS5jAquRA6oQlLq8Y6DHOKYK0';
 
@@ -561,14 +562,14 @@ class _EkranEdycjiWyjazduState extends State<EkranEdycjiWyjazdu> {
       case KategoriaWyjazdu.pozar:
       case KategoriaWyjazdu.miejscoweZagrozenie:
       case KategoriaWyjazdu.alarmFalszywy:
-        stawka = 19;
+        stawka = SerwisEkwiwalentow.stawkaPozarMiejscoweAlarm.toInt();
         break;
       case KategoriaWyjazdu.zabezpieczenieRejonu:
       case KategoriaWyjazdu.zPoleceniaBurmistrza:
-        stawka = 9;
+        stawka = SerwisEkwiwalentow.stawkaZabezpieczeniePolecenie.toInt();
         break;
       case KategoriaWyjazdu.cwiczenia:
-        stawka = 6;
+        stawka = SerwisEkwiwalentow.stawkaCwiczenia.toInt();
         break;
     }
 

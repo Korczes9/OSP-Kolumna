@@ -4,7 +4,6 @@ import '../services/serwis_autentykacji_nowy.dart';
 import '../models/strazak.dart';
 import 'ekran_domowy_osp.dart';
 import 'dialog_rejestracji.dart';
-import 'ekran_pierwszego_konta.dart';
 import 'ekran_debug_logowania.dart';
 
 /// Ekran logowania z weryfikacją konta
@@ -138,6 +137,133 @@ class _EkranLogowaniaState extends State<EkranLogowania> {
     );
   }
 
+  Future<void> _pokazDialogZmianyHasla() async {
+    final stareHasloController = TextEditingController();
+    final noweHasloController = TextEditingController();
+    final powtorzNoweHasloController = TextEditingController();
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Zmień hasło'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: stareHasloController,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Aktualne hasło',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: noweHasloController,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Nowe hasło',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: powtorzNoweHasloController,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Powtórz nowe hasło',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Anuluj'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final emailLubTelefon = _emailController.text.trim();
+                final stareHaslo = stareHasloController.text;
+                final noweHaslo = noweHasloController.text;
+                final powtorzNowe = powtorzNoweHasloController.text;
+
+                if (emailLubTelefon.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Najpierw wpisz email lub numer telefonu'),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                  return;
+                }
+
+                if (stareHaslo.isEmpty || noweHaslo.isEmpty || powtorzNowe.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Uzupełnij wszystkie pola hasła'),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                  return;
+                }
+
+                if (noweHaslo != powtorzNowe) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Nowe hasła muszą być identyczne'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+
+                // Sprawdź połączenie internetowe
+                final connectivityResult = await Connectivity().checkConnectivity();
+                if (connectivityResult.contains(ConnectivityResult.none)) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Brak połączenia z internetem. Spróbuj ponownie później.'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+
+                final wynik = await _authService.zmienHasloPrzyLogowaniu(
+                  emailLubTelefon: emailLubTelefon,
+                  stareHaslo: stareHaslo,
+                  noweHaslo: noweHaslo,
+                );
+
+                if (!mounted) return;
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      wynik['success'] == true
+                          ? (wynik['message'] as String? ?? 'Hasło zostało zmienione')
+                          : (wynik['error'] as String? ?? 'Nie udało się zmienić hasła'),
+                    ),
+                    backgroundColor: wynik['success'] == true ? Colors.green : Colors.red,
+                  ),
+                );
+
+                if (wynik['success'] == true) {
+                  // Podstaw nowe hasło do głównego pola, żeby użytkownik mógł się nim od razu zalogować
+                  _hasloController.text = noweHaslo;
+                  Navigator.pop(context);
+                }
+              },
+              child: const Text('Zapisz'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -212,7 +338,7 @@ class _EkranLogowaniaState extends State<EkranLogowania> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'System Zarządzania Alarmami',
+                          'System Zarządzania OSP Kolumna',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 16,
@@ -319,13 +445,25 @@ class _EkranLogowaniaState extends State<EkranLogowania> {
                         ),
                         const SizedBox(height: 16),
 
-                        // Link resetowania hasła
-                        TextButton(
-                          onPressed: _ladowanie ? null : _resetujHaslo,
-                          child: const Text(
-                            'Zapomniałeś hasła?',
-                            style: TextStyle(fontSize: 14),
-                          ),
+                        // Linki resetu i zmiany hasła
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            TextButton(
+                              onPressed: _ladowanie ? null : _resetujHaslo,
+                              child: const Text(
+                                'Zapomniałeś hasła?',
+                                style: TextStyle(fontSize: 14),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: _ladowanie ? null : _pokazDialogZmianyHasla,
+                              child: const Text(
+                                'Zmień hasło',
+                                style: TextStyle(fontSize: 14),
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 32),
 
@@ -371,24 +509,6 @@ class _EkranLogowaniaState extends State<EkranLogowania> {
                           ),
                         ),
                         const SizedBox(height: 16),
-
-                        // Przycisk do tworzenia pierwszego konta (Administrator)
-                        TextButton.icon(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const EkranPierwszegoKonta(),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.admin_panel_settings, size: 16),
-                          label: const Text(
-                            'Pierwsze uruchomienie? Utwórz konto Administratora',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
 
                         // Przycisk debug (dla administratora/deweloperów)
                         TextButton.icon(

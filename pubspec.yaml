@@ -5,7 +5,7 @@ description: >-
 
 publish_to: 'none'
 
-version: 1.0.17+18
+version: 1.0.25+26
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -72,9 +72,9 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: false
-  image_path: "assets/images/logo_osp_kolumna.png"
+  image_path: "ikona kolumna.png"
   adaptive_icon_background: "#FF0000"
-  adaptive_icon_foreground: "assets/images/logo_osp_kolumna.png"
+  adaptive_icon_foreground: "ikona kolumna.png"
 
 flutter:
   uses-material-design: true

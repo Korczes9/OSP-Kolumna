@@ -67,6 +67,15 @@ service cloud.firestore {
       // Moderator i Administrator mogą edytować
       allow create, update, delete: if isModerator();
     }
+
+    // Kolekcja wozów strażackich używana w statystykach i raportach PDF
+    match /wozy_strazackie/{wozId} {
+      // Każdy zalogowany może czytać
+      allow read: if isSignedIn();
+
+      // Moderator i Administrator mogą zarządzać listą wozów
+      allow create, update, delete: if isModerator();
+    }
     
     // Kolekcja kalendarza/dyżurów
     match /kalendarz/{eventId} {
@@ -90,13 +99,20 @@ service cloud.firestore {
       allow update: if isSignedIn() && (
         isModerator() || 
         (
-          // Strażak może tylko dodawać/usuwać siebie z listy uczestników
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uczestnicyIds']) &&
+          // Strażak może tylko zmieniać swój status obecności
+          // (listy uczestnicyIds, nieBedzieIds, jeszczeNieWiemIds)
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'uczestnicyIds',
+            'nieBedzieIds',
+            'jeszczeNieWiemIds'
+          ]) &&
           (
-            // Dodawanie się (arrayUnion)
+            // Dodawanie się (arrayUnion) do uczestników
             request.resource.data.uczestnicyIds.toSet().difference(resource.data.uczestnicyIds.toSet()) == [request.auth.uid].toSet() ||
-            // Wypisywanie się (arrayRemove)
-            resource.data.uczestnicyIds.toSet().difference(request.resource.data.uczestnicyIds.toSet()) == [request.auth.uid].toSet()
+            // Wypisywanie się (arrayRemove) z uczestników
+            resource.data.uczestnicyIds.toSet().difference(request.resource.data.uczestnicyIds.toSet()) == [request.auth.uid].toSet() ||
+            // Zmiana statusu tylko w dodatkowych listach (uczestnicyIds bez zmian)
+            request.resource.data.uczestnicyIds.toSet() == resource.data.uczestnicyIds.toSet()
           )
         )
       );
@@ -202,6 +218,15 @@ service cloud.firestore {
       
       // Tylko Administrator może usuwać
       allow delete: if isAdministrator();
+    }
+
+    // Kolekcja konfiguracji aplikacji (np. stawki ekwiwalentu)
+    match /config/{configId} {
+      // Każdy zalogowany może odczytać konfigurację
+      allow read: if isSignedIn();
+
+      // Moderator/Administrator mogą zmieniać ustawienia
+      allow create, update, delete: if isModerator();
     }
     
     // Domyślnie - brak dostępu

@@ -33,6 +33,8 @@ class Wydarzenie {
   final String utworzonePrzez; // ID strażaka
   final DateTime dataUtworzenia;
   final List<String> uczestnicyIds; // Lista ID strażaków zapisanych na wydarzenie
+  final List<String> nieBedzieIds; // Lista ID strażaków, którzy oznaczyli, że ich nie będzie
+  final List<String> jeszczeNieWiemIds; // Lista ID strażaków, którzy jeszcze nie wiedzą
   final bool widoczneDlaWszystkich; // true = wszyscy, false = tylko gospodarz+
 
   Wydarzenie({
@@ -46,6 +48,8 @@ class Wydarzenie {
     required this.utworzonePrzez,
     required this.dataUtworzenia,
     this.uczestnicyIds = const [],
+    this.nieBedzieIds = const [],
+    this.jeszczeNieWiemIds = const [],
     this.widoczneDlaWszystkich = true,
   });
 
@@ -63,6 +67,8 @@ class Wydarzenie {
       utworzonePrzez: map['utworzonePrzez'] ?? '',
       dataUtworzenia: (map['dataUtworzenia'] as Timestamp).toDate(),
       uczestnicyIds: List<String>.from(map['uczestnicyIds'] ?? []),
+      nieBedzieIds: List<String>.from(map['nieBedzieIds'] ?? []),
+      jeszczeNieWiemIds: List<String>.from(map['jeszczeNieWiemIds'] ?? []),
       widoczneDlaWszystkich: map['widoczneDlaWszystkich'] ?? true,
     );
   }
@@ -80,6 +86,8 @@ class Wydarzenie {
       'utworzonePrzez': utworzonePrzez,
       'dataUtworzenia': Timestamp.fromDate(dataUtworzenia),
       'uczestnicyIds': uczestnicyIds,
+      'nieBedzieIds': nieBedzieIds,
+      'jeszczeNieWiemIds': jeszczeNieWiemIds,
       'widoczneDlaWszystkich': widoczneDlaWszystkich,
     };
   }

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/serwis_ekwiwalentow.dart';
 
 /// Kategorie wyjazdów
 enum KategoriaWyjazdu {
@@ -119,6 +120,16 @@ class Wyjazd {
     }
   }
   
+  /// Oblicza łączną liczbę strażaków (dla wstecznej kompatybilności i dwóch wozów)
+  int get liczbaStrazakow {
+    // Jeśli są dwa wozy, liczymy z woz1 i woz2
+    if (woz1StrazacyIds.isNotEmpty || woz2StrazacyIds.isNotEmpty) {
+      return woz1StrazacyIds.length + woz2StrazacyIds.length;
+    }
+    // W przeciwnym razie używamy starego pola
+    return strazacyIds.length;
+  }
+  
   /// Oblicza ekwiwalent na podstawie kategorii
   double get ekwiwalent {
     final godziny = czasTrwaniaGodzinyZaokraglone;
@@ -129,14 +140,14 @@ class Wyjazd {
       case KategoriaWyjazdu.pozar:
       case KategoriaWyjazdu.miejscoweZagrozenie:
       case KategoriaWyjazdu.alarmFalszywy:
-        stawka = 19.0;
+        stawka = SerwisEkwiwalentow.stawkaPozarMiejscoweAlarm;
         break;
       case KategoriaWyjazdu.zabezpieczenieRejonu:
       case KategoriaWyjazdu.zPoleceniaBurmistrza:
-        stawka = 9.0;
+        stawka = SerwisEkwiwalentow.stawkaZabezpieczeniePolecenie;
         break;
       case KategoriaWyjazdu.cwiczenia:
-        stawka = 6.0;
+        stawka = SerwisEkwiwalentow.stawkaCwiczenia;
         break;
     }
     

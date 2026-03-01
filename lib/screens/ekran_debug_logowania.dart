@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'ekran_testu_firebase.dart';
 
 /// Ekran diagnostyczny do debugowania problemów z logowaniem
 class EkranDebugLogowania extends StatefulWidget {
@@ -186,6 +187,26 @@ class _EkranDebugLogowaniaState extends State<EkranDebugLogowania> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.orange[700],
                 foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Przycisk testu Firebase
+            OutlinedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const EkranTestuFirebase(),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.science_outlined),
+              label: const Text('🧪 Zaawansowany test Firebase'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.blue[700],
+                side: BorderSide(color: Colors.blue[700]!),
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
             ),

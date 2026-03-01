@@ -26,8 +26,17 @@ class _EkranKonfiguracjiEremizaState extends State<EkranKonfiguracjiEremiza> {
   }
 
   Future<void> _loadSettings() async {
-    await _eremizaService.loadCredentials();
+    final hasCredentials = await _eremizaService.loadCredentials();
     final lastSync = await _eremizaService.getLastSyncTime();
+    
+    // Załaduj zapisane dane do kontrolerów
+    if (hasCredentials) {
+      final email = await _eremizaService.getSavedEmail();
+      final password = await _eremizaService.getSavedPassword();
+      
+      if (email != null) _emailController.text = email;
+      if (password != null) _passwordController.text = password;
+    }
     
     setState(() {
       _autoSyncEnabled = _eremizaService.isConfigured();

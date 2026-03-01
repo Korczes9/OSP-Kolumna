@@ -1,8 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'firebase_options.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -15,6 +15,8 @@ import 'services/serwis_autentykacji_nowy.dart';
 import 'services/eremiza_service.dart';
 import 'services/serwis_motywu.dart';
 import 'services/serwis_powiadomien.dart';
+import 'services/realtime_service_manager.dart';
+import 'services/serwis_ekwiwalentow.dart';
 import 'models/strazak.dart';
 
 /// Handler dla powiadomień w tle (musi być top-level)
@@ -22,6 +24,14 @@ import 'models/strazak.dart';
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   debugPrint('📨 Powiadomienie w tle: ${message.notification?.title}');
+  try {
+    // Log do pliku na potrzeby debugowania działania w tle
+    final file = File('/storage/emulated/0/osp_alarm_log.txt');
+    final now = DateTime.now();
+    await file.writeAsString('[${now.toIso8601String()}] Powiadomienie w tle: ${message.notification?.title}\n', mode: FileMode.append);
+  } catch (e) {
+    debugPrint('Błąd zapisu logu w tle: ${e.toString()}');
+  }
   await SerwisPowiadomien.obsluzPowiadomienieWTle(message);
 }
 
@@ -43,19 +53,20 @@ void main() async {
       );
       debugPrint('[INIT] ✓ Firebase gotowy');
 
+      // UWAGA: Firestore persistence jest domyślnie włączone na Android/iOS
+      // Nie ustawiamy settings ręcznie, bo background handler może już użyć Firestore
+      debugPrint('[INIT] ✓ Firestore (persistence: domyślne ustawienia)');
+
+      // Inicjalizacja stawek ekwiwalentu z Firestore
+      debugPrint('[INIT] Ładowanie stawek ekwiwalentu...');
+      await SerwisEkwiwalentow.init();
+      debugPrint('[INIT] ✓ Stawki ekwiwalentu załadowane');
+
       // Inicjalizacja Firebase Cloud Messaging dla powiadomień w tle
       debugPrint('[INIT] Konfiguracja FCM...');
       FirebaseMessaging.onBackgroundMessage(
           _firebaseMessagingBackgroundHandler);
       debugPrint('[INIT] ✓ FCM gotowy');
-
-      // Włączenie offline persistence dla Firestore
-      debugPrint('[INIT] Konfiguracja Firestore...');
-      FirebaseFirestore.instance.settings = const Settings(
-        persistenceEnabled: true,
-        cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
-      );
-      debugPrint('[INIT] ✓ Firestore gotowy');
 
       // Uruchomienie auto-sync eRemiza (jeśli skonfigurowane)
       debugPrint('[INIT] Sprawdzanie konfiguracji eRemiza...');
@@ -66,6 +77,17 @@ void main() async {
         debugPrint('[INIT] ✓ Auto-sync eRemiza uruchomiony');
       } else {
         debugPrint('[INIT] ⏭️ eRemiza nie skonfigurowana');
+      }
+
+      // Uruchomienie Foreground Service (tylko Android)
+      if (Platform.isAndroid) {
+        debugPrint('[INIT] Uruchamianie Foreground Service...');
+        final serviceLaunched = await RealtimeServiceManager.startService();
+        if (serviceLaunched) {
+          debugPrint('[INIT] ✓ Foreground Service uruchomiony');
+        } else {
+          debugPrint('[INIT] ⚠️ Nie udało się uruchomić Foreground Service');
+        }
       }
 
       debugPrint('[INIT] ✓ Uruchamianie aplikacji...');
@@ -246,6 +268,11 @@ class TematDane {
         ),
         hintStyle: const TextStyle(color: Color(0xFF808080)),
       ),
+      textSelectionTheme: TextSelectionThemeData(
+        cursorColor: Colors.blue[400],
+        selectionColor: Colors.blue[700]!.withOpacity(0.4),
+        selectionHandleColor: Colors.blue[400],
+      ),
       textTheme: const TextTheme(
         bodyLarge: TextStyle(
           color: Colors.white,
@@ -256,7 +283,7 @@ class TematDane {
           fontSize: 14,
         ),
         bodySmall: TextStyle(
-          color: Color(0xFFB0B0B0),
+          color: Color(0xFFD0D0D0), // Jaśniejszy szary dla lepszej widoczności
           fontSize: 12,
         ),
         headlineLarge: TextStyle(
@@ -286,11 +313,16 @@ class TematDane {
         ),
       ),
       iconTheme: const IconThemeData(
-        color: Colors.white70,
+        color: Color(0xFFE0E0E0), // Jaśniejsze ikony dla lepszej widoczności
       ),
-      listTileTheme: const ListTileThemeData(
+      listTileTheme: ListTileThemeData(
         textColor: Colors.white,
-        iconColor: Colors.white70,
+        iconColor: const Color(0xFFE0E0E0),
+        selectedTileColor: Colors.blue[900]!.withOpacity(0.3),
+        selectedColor: Colors.blue[200],
+        subtitleTextStyle: const TextStyle(
+          color: Color(0xFFD0D0D0), // Jaśniejszy kolor dla napisów podrzędnych
+        ),
       ),
     );
   }

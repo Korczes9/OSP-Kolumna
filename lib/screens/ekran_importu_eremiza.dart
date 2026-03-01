@@ -113,6 +113,7 @@ class _EkranImportuEremizaState extends State<EkranImportuEremiza> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Import z eRemiza'),
@@ -136,7 +137,7 @@ class _EkranImportuEremizaState extends State<EkranImportuEremiza> {
             children: [
               // Informacja
               Card(
-                color: Colors.blue[50],
+                color: isDark ? Colors.blue[900] : Colors.blue[50],
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
@@ -230,7 +231,7 @@ class _EkranImportuEremizaState extends State<EkranImportuEremiza> {
               if (_zalogowany) ...[
                 // Przycisk importu
                 Card(
-                  color: Colors.green[50],
+                  color: isDark ? Colors.green[900] : Colors.green[50],
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
@@ -281,8 +282,8 @@ class _EkranImportuEremizaState extends State<EkranImportuEremiza> {
                 const SizedBox(height: 24),
                 Card(
                   color: _wynikImportu!.startsWith('✅')
-                      ? Colors.green[50]
-                      : Colors.red[50],
+                      ? (isDark ? Colors.green[900] : Colors.green[50])
+                      : (isDark ? Colors.red[900] : Colors.red[50]),
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Text(
@@ -290,8 +291,8 @@ class _EkranImportuEremizaState extends State<EkranImportuEremiza> {
                       style: TextStyle(
                         fontSize: 14,
                         color: _wynikImportu!.startsWith('✅')
-                            ? Colors.green[900]
-                            : Colors.red[900],
+                            ? (isDark ? Colors.green[100] : Colors.green[900])
+                            : (isDark ? Colors.red[100] : Colors.red[900]),
                       ),
                     ),
                   ),

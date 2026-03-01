@@ -28,6 +28,7 @@ import 'ekran_zatwierdzania_uzytkownikow.dart';
 import 'ekran_zagrozen.dart';
 import 'ekran_wyjazdow_w_powiecie.dart';
 import 'ekran_o_aplikacji.dart';
+import 'ekran_diagnostyki_alarmu.dart';
 import 'ekran_zglaszania_problemow.dart';
 import 'ekran_czatu_grupowego.dart';
 import 'ekran_monitoringu_discord.dart';
@@ -76,22 +77,26 @@ class _EkranDomowyOSPState extends State<EkranDomowyOSP> {
     try {
       debugPrint('🔄 Inicjalizacja eRemiza...');
       
-      // Ustaw dane logowania
-      await _eremizaService.setCredentials(
-        'korczes9@gmail.com',
-        'M@gda1994',
-      );
+      // Wczytaj zapisane dane logowania (jeśli użytkownik je skonfigurował)
+      final maKonfiguracje = await _eremizaService.loadCredentials();
       
-      // Zaloguj się
+      if (!maKonfiguracje) {
+        debugPrint('⚠️ eRemiza nie skonfigurowane - pomiń inicjalizację');
+        debugPrint('ℹ️ Skonfiguruj w: Menu → Integracja eRemiza');
+        return;
+      }
+      
+      // Przetestuj połączenie
       await _eremizaService.login();
-      debugPrint('✅ eRemiza - zalogowano');
+      debugPrint('✅ eRemiza - połączenie OK');
       
-      // Uruchom automatyczną synchronizację
-      _eremizaService.startAutoSync();
-      debugPrint('✅ eRemiza - auto-sync uruchomiony');
+      // Uruchom automatyczną synchronizację (jeśli włączona)
+      // _eremizaService.startAutoSync(); // Użytkownik włącza ręcznie w konfiguracji
+      debugPrint('✅ eRemiza - gotowe do synchronizacji');
       
     } catch (e) {
       debugPrint('⚠️ Błąd inicjalizacji eRemiza: $e');
+      debugPrint('💡 Sprawdź konfigurację w: Menu → Integracja eRemiza');
       // Nie przerywaj działania aplikacji jeśli eRemiza nie działa
     }
   }
@@ -148,8 +153,12 @@ class _EkranDomowyOSPState extends State<EkranDomowyOSP> {
         }
 
         Widget buildLista(Map<String, String> strazakMap) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          final cardColor = isDark ? Colors.orange[900] : Colors.orange[50];
+          final textColor = isDark ? Colors.white : Colors.black87;
+
           return Card(
-            color: Colors.orange[50],
+            color: cardColor,
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -183,7 +192,7 @@ class _EkranDomowyOSPState extends State<EkranDomowyOSP> {
                       padding: const EdgeInsets.only(bottom: 6),
                       child: Text(
                         '$tytul (ważne do: ${_formatujDate(dataWaznosci)} • $dni dni)',
-                        style: const TextStyle(fontSize: 13),
+                        style: TextStyle(fontSize: 13, color: textColor),
                       ),
                     );
                   }),
@@ -227,6 +236,11 @@ class _EkranDomowyOSPState extends State<EkranDomowyOSP> {
   @override
   Widget build(BuildContext context) {
     final authService = AuthService();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final powitalnaCardColor = isDark ? Colors.red[900] : Colors.red[50];
+    final imgwCardColor = isDark ? Colors.orange[900] : Colors.orange[50];
+    final proBadgeBgColor = isDark ? Colors.deepPurple[900] : Colors.deepPurple[100];
+    final proBadgeTextColor = isDark ? Colors.deepPurple[100] : Colors.deepPurple[900];
 
     return Scaffold(
       appBar: AppBar(
@@ -272,6 +286,13 @@ class _EkranDomowyOSPState extends State<EkranDomowyOSP> {
                     builder: (_) => EkranZatwierdzaniaUzytkownikow(
                       aktualnyStrazak: widget.strazak,
                     ),
+                  ),
+                );
+              } else if (value == 'diagnostyka_alarmu') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const EkranDiagnostykiAlarmu(),
                   ),
                 );
               } else if (value == 'o_aplikacji') {
@@ -340,6 +361,17 @@ class _EkranDomowyOSPState extends State<EkranDomowyOSP> {
                 const PopupMenuDivider(),
               ],
               const PopupMenuItem(
+                value: 'diagnostyka_alarmu',
+                child: Row(
+                  children: [
+                    Icon(Icons.campaign, size: 20),
+                    SizedBox(width: 8),
+                    Text('Diagnostyka alarmu'),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem(
                 value: 'o_aplikacji',
                 child: Row(
                   children: [
@@ -369,7 +401,7 @@ class _EkranDomowyOSPState extends State<EkranDomowyOSP> {
         children: [
           // Sekcja powitalna
           Card(
-            color: Colors.red[50],
+            color: powitalnaCardColor,
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
@@ -421,7 +453,7 @@ class _EkranDomowyOSPState extends State<EkranDomowyOSP> {
           // Widget z ostrzeżeniami IMGW (jeśli są)
           if (_ostrzezenia.isNotEmpty) ...[
             Card(
-              color: Colors.orange[50],
+              color: imgwCardColor,
               child: ExpansionTile(
                 leading: Icon(Icons.warning_amber, color: Colors.orange[700], size: 32),
                 title: Text(
@@ -696,13 +728,13 @@ class _EkranDomowyOSPState extends State<EkranDomowyOSP> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.deepPurple[100],
+                      color: proBadgeBgColor,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       'PRO',
                       style: TextStyle(
-                        color: Colors.deepPurple[900],
+                        color: proBadgeTextColor,
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
                       ),
@@ -739,13 +771,13 @@ class _EkranDomowyOSPState extends State<EkranDomowyOSP> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.deepPurple[100],
+                      color: proBadgeBgColor,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       'PRO',
                       style: TextStyle(
-                        color: Colors.deepPurple[900],
+                        color: proBadgeTextColor,
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
                       ),

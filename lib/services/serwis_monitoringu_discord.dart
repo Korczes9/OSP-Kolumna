@@ -7,7 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// Serwis monitorujący nowe wiadomości Discord i wysyłający powiadomienia
 class SerwisMonitoringuDiscord {
-    static const String _discordBotToken =
+  // Token Discord Bot - jeśli nie ustawiony w zmiennych środowiskowych, użyj hardcodowanego
+  static const String _discordBotToken =
       String.fromEnvironment('DISCORD_BOT_TOKEN', defaultValue: '');
   static const String _discordChannelId = '1193142209470533733';
   static const String _prefKeyLastMessageId = 'discord_last_message_id';
@@ -183,12 +184,12 @@ class SerwisMonitoringuDiscord {
       }
 
       // Zapisz powiadomienie w Firestore (Cloud Function wyśle je)
-      await _firestore.collection('powiadomienia').add({
+      await _firestore.collection('notifications').add({
         'tokens': tokens,
         'title': czyAlarmZWyhamowaniem ? '🚨 ALARM - Kolumna' : '💬 $title',
         'body': body.isNotEmpty ? body : content,
+        'type': czyAlarmZWyhamowaniem ? 'ALARM' : 'discord',
         'data': {
-          'type': czyAlarmZWyhamowaniem ? 'ALARM' : 'discord',
           'messageId': wiadomosc['id'],
           'author': authorName,
           'channelId': _discordChannelId,

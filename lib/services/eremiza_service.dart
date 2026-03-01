@@ -173,46 +173,51 @@ class EremizaService {
     }
   }
 
-  /// Logowanie do eRemiza
+  /// Logowanie do eRemiza (test połączenia)
   Future<Map<String, dynamic>> login() async {
     try {
-      print('🔐 Próba logowania do eRemiza...');
+      print('🔐 Próba testowania połączenia z eRemiza...');
       print('📧 Email: ${_email?.substring(0, 3)}***');
       
-      _user = await _request('GET', '/User/GetUser');
+      // eRemiza API nie wymaga oddzielnego "logowania"
+      // Test połączenia = próba pobrania alarmów
+      // Jeśli JWT jest poprawny, zwróci dane
       
-      if (_user == null) {
-        throw Exception('Nie udało się pobrać danych użytkownika z eRemiza');
+      print('📊 Test: Próba pobrania 1 alarmu...');
+      final testAlarms = await _request('GET', '/Alarm/GetAlarmList', {
+        'count': '1',
+        'offset': '0',
+      });
+      
+      if (testAlarms is! List) {
+        throw Exception('eRemiza zwróciło nieprawidłowy format danych');
       }
 
-      print('✅ Zalogowano pomyślnie');
-      print('👤 Użytkownik: ${_user!['name'] ?? 'Nieznany'}');
+      print('✅ Połączenie z eRemiza OK!');
+      print('📊 Pobrano testowo ${testAlarms.length} alarm(y)');
+      
+      // Zapisz prosty marker, że jesteśmy zalogowani
+      _user = {
+        'email': _email,
+        'connected': true,
+        'testedAt': DateTime.now().toIso8601String(),
+      };
       
       return _user!;
     } catch (e) {
-      print('❌ Błąd logowania: $e');
+      print('❌ Błąd testowania połączenia: $e');
+      _user = null;
       rethrow;
     }
   }
 
   /// Pobierz listę alarmów
   Future<List<dynamic>> getAlarms({int count = 20, int offset = 0}) async {
-    if (_user == null) {
-      await login();
-    }
-
-    final ouId = _user!['bsisOuId'];
-    if (ouId == null) {
-      throw Exception('Brak bsisOuId w danych użytkownika. Skontaktuj się z administratorem eRemiza.');
-    }
-
     print('🔍 Pobieranie alarmów...');
-    print('   OU ID: $ouId');
     print('   Count: $count');
     print('   Offset: $offset');
 
     final alarms = await _request('GET', '/Alarm/GetAlarmList', {
-      'ouId': ouId.toString(),
       'count': count.toString(),
       'offset': offset.toString(),
     });
@@ -439,5 +444,17 @@ class EremizaService {
   /// Sprawdź czy jest skonfigurowany
   bool isConfigured() {
     return _email != null && _password != null;
+  }
+  
+  /// Pobierz zapisany email
+  Future<String?> getSavedEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(prefKeyEmail);
+  }
+  
+  /// Pobierz zapisane hasło
+  Future<String?> getSavedPassword() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(prefKeyPassword);
   }
 }

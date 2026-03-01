@@ -41,6 +41,7 @@ class EkranOAplikacji extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       appBar: AppBar(
         title: const Text('O aplikacji'),
@@ -75,7 +76,7 @@ class EkranOAplikacji extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Wersja 1.0.4+5',
+                  'Wersja 1.0.24+25',
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey,
@@ -217,7 +218,7 @@ class EkranOAplikacji extends StatelessWidget {
 
           // Informacje o autorze
           Card(
-            color: Colors.red[50],
+            color: isDark ? Colors.red[900] : Colors.red[50],
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(

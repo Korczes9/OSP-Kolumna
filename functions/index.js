@@ -147,23 +147,38 @@ exports.wyslijPowiadomienie = functions
     }
 
     let message;
-    
+
     // Przygotuj wiadomość w zależności od typu
     if (notification.type === 'ALARM') {
+      // Dla ALARMU wysyłamy zarówno payload "notification" (żeby system
+      // Android sam pokazał głośne powiadomienie nawet, gdy aplikacja
+      // jest ubita/zablokowana), jak i payload "data" do obsługi
+      // po stronie klienta.
+      const alarmTitle = '🚨 ALARM!';
+      const alarmBody = `${notification.kategoria || ''} - ${notification.lokalizacja || ''}`.trim();
+
       message = {
+        notification: {
+          title: alarmTitle,
+          body: alarmBody,
+        },
         data: {
           type: 'ALARM',
           wyjazdId: notification.wyjazdId || '',
           kategoria: notification.kategoria || '',
           lokalizacja: notification.lokalizacja || '',
           opis: notification.opis || '',
-          title: '🚨 ALARM!',
-          body: `${notification.kategoria || ''} - ${notification.lokalizacja || ''}`.trim(),
+          title: alarmTitle,
+          body: alarmBody,
           godzina: new Date().toISOString(),
         },
         android: {
           priority: 'high',
-        },
+          notification: {
+            channelId: 'alarm_channel',
+            sound: 'syrena',
+            priority: 'PRIORITY_MAX',
+          },
         },
       };
     } else if (notification.type === 'WYDARZENIE') {
@@ -209,6 +224,24 @@ exports.wyslijPowiadomienie = functions
           dataDo: notification.data?.dataDo || '',
           region: notification.data?.region || '',
           typ: notification.data?.typ || '',
+        },
+      };
+    } else if (notification.type === 'discord') {
+      // Powiadomienie Discord
+      message = {
+        notification: {
+          title: notification.title || '💬 Discord',
+          body: notification.body || 'Nowa wiadomość na Discord',
+        },
+        data: {
+          type: 'discord',
+          messageId: notification.data?.messageId || '',
+          author: notification.data?.author || '',
+          channelId: notification.data?.channelId || '',
+          kategoria: notification.data?.kategoria || 'Discord',
+          fullContent: notification.data?.fullContent || '',
+          fullTitle: notification.data?.fullTitle || '',
+          fullBody: notification.data?.fullBody || '',
         },
       };
     } else {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/wyjazd.dart';
 import '../models/strazak.dart';
+import '../services/serwis_ekwiwalentow.dart';
 import 'ekran_edycji_wyjazdu.dart';
 
 /// Ekran raportu ekwiwalentów
@@ -44,12 +45,22 @@ class _EkranRaportuEkwiwalentowState extends State<EkranRaportuEkwiwalentow> {
         title: const Text('Sprawdź w jakich wyjazdach brałem udział'),
         backgroundColor: Colors.orange[700],
         foregroundColor: Colors.white,
+        actions: [
+          if (_czyMozeEdytowacStawki())
+            IconButton(
+              icon: const Icon(Icons.edit),
+              tooltip: 'Zmień stawki ekwiwalentu',
+              onPressed: _pokazDialogStawek,
+            ),
+        ],
       ),
       body: Column(
         children: [
           // Filtry
           Container(
-            color: Colors.orange[50],
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.orange[900]
+                : Colors.orange[50],
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -58,7 +69,12 @@ class _EkranRaportuEkwiwalentowState extends State<EkranRaportuEkwiwalentow> {
                   'Filtry',
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 4),
+                Text(
+                  'Aktualny okres: \\${_formatujDate(_dataOd)} - \\${_formatujDate(_dataDo)}',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                const SizedBox(height: 8),
 
                 // Zakres dat
                 Row(
@@ -242,6 +258,121 @@ class _EkranRaportuEkwiwalentowState extends State<EkranRaportuEkwiwalentow> {
           ),
         ],
       ),
+    );
+  }
+
+  bool _czyMozeEdytowacStawki() {
+    final strazak = widget.aktualnyStrazak;
+    // Moderator, gospodarz, administrator itp. mają prawo do edycji
+    return strazak.jestModeratorem;
+  }
+
+  double? _parseStawka(String text) {
+    // Akceptuj wpisy typu "19", "19,5", "19.50", "19,50 zl" itp.
+    var cleaned = text.trim();
+    if (cleaned.isEmpty) return null;
+
+    cleaned = cleaned
+        .replaceAll(',', '.')
+        .replaceAll(RegExp('[^0-9\.]'), '');
+
+    if (cleaned.isEmpty) return null;
+
+    return double.tryParse(cleaned);
+  }
+
+  Future<void> _pokazDialogStawek() async {
+    final pozarController = TextEditingController(
+      text: SerwisEkwiwalentow.stawkaPozarMiejscoweAlarm.toStringAsFixed(2),
+    );
+    final zabezController = TextEditingController(
+      text: SerwisEkwiwalentow.stawkaZabezpieczeniePolecenie.toStringAsFixed(2),
+    );
+    final cwiczeniaController = TextEditingController(
+      text: SerwisEkwiwalentow.stawkaCwiczenia.toStringAsFixed(2),
+    );
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Stawki ekwiwalentu (PLN/h)'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: pozarController,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(
+                    labelText: 'Pożar / Miejscowe / Alarm fałszywy',
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: zabezController,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(
+                    labelText: 'Zabezpieczenie rejonu / Z polecenia Burmistrza',
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: cwiczeniaController,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(
+                    labelText: 'Ćwiczenia',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Anuluj'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final nowaPozar = _parseStawka(pozarController.text);
+                final nowaZabez = _parseStawka(zabezController.text);
+                final nowaCwiczenia = _parseStawka(cwiczeniaController.text);
+
+                if (nowaPozar == null || nowaZabez == null || nowaCwiczenia == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Nieprawidłowe wartości stawek (użyj np. 19,50)'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+
+                await SerwisEkwiwalentow.zapiszStawki(
+                  nowaStawkaPozarMiejscoweAlarm: nowaPozar,
+                  nowaStawkaZabezpieczeniePolecenie: nowaZabez,
+                  nowaStawkaCwiczenia: nowaCwiczenia,
+                );
+
+                if (mounted) {
+                  setState(() {});
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Stawki ekwiwalentu zapisane'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              },
+              child: const Text('Zapisz'),
+            ),
+          ],
+        );
+      },
     );
   }
 

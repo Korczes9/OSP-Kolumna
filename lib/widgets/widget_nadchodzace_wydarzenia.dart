@@ -220,16 +220,17 @@ class WidgetNadchodzaceWydarzenia extends StatelessWidget {
   String _formatujDate(DateTime data) {
     final teraz = DateTime.now();
     final dzisiaj = DateTime(teraz.year, teraz.month, teraz.day);
-    final jutro = dzisiaj.add(const Duration(days: 1));
     final dataWydarzenia = DateTime(data.year, data.month, data.day);
 
+    final roznicaDni = dataWydarzenia.difference(dzisiaj).inDays;
+
     String relativeText;
-    if (dataWydarzenia == dzisiaj) {
+    if (roznicaDni == 0) {
       relativeText = 'Dziś';
-    } else if (dataWydarzenia == jutro) {
+    } else if (roznicaDni == 1) {
       relativeText = 'Jutro';
-    } else if (data.difference(teraz).inDays < 7) {
-      relativeText = 'Za ${data.difference(teraz).inDays} dni';
+    } else if (roznicaDni > 1 && roznicaDni <= 7) {
+      relativeText = 'Za $roznicaDni dni';
     } else {
       relativeText = '${data.day}.${data.month}.${data.year}';
     }

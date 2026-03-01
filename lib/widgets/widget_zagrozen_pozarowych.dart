@@ -222,12 +222,14 @@ class _WidgetZagrozeniaPozarowegoState extends State<WidgetZagrozeniaPozarowego>
     final czyAlertWiatru = _alertWiatru?['aktywny'] == true;
     final poziomPozarowy = _zagrozeniePozarowe?['stopien'] ?? 0;
     
-    if (czyAlertWiatru || poziomPozarowy >= 3) {
-      return Colors.red[50]!;
-    } else if (poziomPozarowy >= 2) {
-      return Colors.orange[50]!;
-    }
-    return Colors.yellow[50]!;
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+
+      if (czyAlertWiatru || poziomPozarowy >= 3) {
+        return isDark ? Colors.red[900]! : Colors.red[50]!;
+      } else if (poziomPozarowy >= 2) {
+        return isDark ? Colors.orange[900]! : Colors.orange[50]!;
+      }
+      return isDark ? Colors.yellow[900]! : Colors.yellow[50]!;
   }
 
   Color _kolorNaglowka() {
