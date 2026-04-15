@@ -1,5 +1,5 @@
 services:
-  - type: worker
+  - type: web
     name: osp-kolumna-discord-worker
     runtime: node
     rootDir: notify_backend
