@@ -474,3 +474,16 @@ start().catch((err) => {
   console.error('Startup error', err);
   process.exit(1);
 });
+
+// Self-ping co 10 minut zeby Render free tier nie zasypial
+const renderUrl = process.env.RENDER_EXTERNAL_URL || '';
+if (renderUrl) {
+  setInterval(async () => {
+    try {
+      await fetch(`${renderUrl}/health`);
+      console.log('Self-ping OK');
+    } catch (e) {
+      console.warn('Self-ping failed:', e.message);
+    }
+  }, 10 * 60 * 1000);
+}
