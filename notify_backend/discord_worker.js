@@ -117,8 +117,8 @@ function resolveTitleAndBody(message) {
 }
 
 function shouldTriggerAlarm(title, body, content) {
-  const fullText = `${title} ${body} ${content}`.toUpperCase();
-  const alarmDetected = fullText.includes(alarmKeyword.toUpperCase());
+  const fullText = `${title} ${body} ${content}`.toLowerCase();
+  const alarmDetected = fullText.includes(alarmKeyword.toLowerCase());
   if (!alarmDetected) {
     return false;
   }
