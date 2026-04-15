@@ -135,10 +135,30 @@ async function sendNotification(message) {
   const { title, body, content } = resolveTitleAndBody(message);
 
   const isAlarm = shouldTriggerAlarm(title, body, content);
+  let wyjazdId = null;
+
   if (isAlarm) {
     lastAlarmAt = new Date();
     await saveState();
     console.log('ALARM detected by keyword');
+
+    // Stworz wyjazd w Firestore zeby strazacy mogli reagowac
+    const alarmOpis = `${title} ${body} ${content}`.trim().substring(0, 300);
+    const wyjazdRef = db.collection('wyjazdy').doc();
+    wyjazdId = wyjazdRef.id;
+    await wyjazdRef.set({
+      tytul: 'Alarm - Kolumna',
+      lokalizacja: '',
+      opis: alarmOpis,
+      kategoria: 'miejscoweZagrozenie',
+      status: 'aktywny',
+      zrodlo: 'discord',
+      godzinaAlarmu: admin.firestore.FieldValue.serverTimestamp(),
+      dataWyjazdu: admin.firestore.FieldValue.serverTimestamp(),
+      utworzonePrzez: 'system_discord',
+      strazacyIds: [],
+    });
+    console.log('Discord alarm: created wyjazd ' + wyjazdId);
   }
 
   const usersSnapshot = await db.collection('strazacy').get();
@@ -157,6 +177,7 @@ async function sendNotification(message) {
     body: body || content,
     data: {
       type: isAlarm ? 'ALARM' : 'discord',
+      wyjazdId: wyjazdId || '',
       messageId: String(message.id || ''),
       author: String(authorName),
       channelId: String(discordChannelId),
