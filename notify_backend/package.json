@@ -12,6 +12,7 @@
     "worker": "node discord_worker.js"
   },
   "dependencies": {
+    "cheerio": "^1.0.0",
     "dotenv": "^16.6.1",
     "express": "^4.19.2",
     "firebase-admin": "^12.5.0"

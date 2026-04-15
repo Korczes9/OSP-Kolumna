@@ -1,6 +1,7 @@
 require('dotenv').config();
 const admin = require('firebase-admin');
 const express = require('express');
+const cheerio = require('cheerio');
 
 const discordBotToken = process.env.DISCORD_BOT_TOKEN || '';
 const discordChannelId = process.env.DISCORD_CHANNEL_ID || '';
@@ -10,6 +11,7 @@ const alarmKeyword = String(process.env.DISCORD_ALARM_KEYWORD || 'KOLUMNA');
 const alarmCooldownMinutes = Number(process.env.DISCORD_ALARM_COOLDOWN_MINUTES || '4');
 const stateDocPath = process.env.DISCORD_STATE_DOC || 'config/discord_monitor';
 const port = Number(process.env.PORT || '10000');
+const eRemizaPollIntervalSeconds = Number(process.env.EREMIZA_POLL_INTERVAL_SECONDS || '60');
 
 const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT || '';
 const serviceAccountB64 = process.env.FIREBASE_SERVICE_ACCOUNT_B64 || '';
@@ -43,6 +45,8 @@ let lastMessageId = null;
 let lastAlarmAt = null;
 let inFlight = false;
 let nextAllowedAt = 0;
+let eRemizaInFlight = false;
+const knownEremizaIds = new Set();
 
 async function loadState() {
   const snap = await stateRef.get();
@@ -65,6 +69,20 @@ async function saveState() {
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   };
   await stateRef.set(payload, { merge: true });
+}
+
+// Znajdz aktywny wyjazd stworzony w ciagu ostatnich X minut (deduplication)
+async function findRecentWyjazd(withinMinutes = 10) {
+  const since = new Date(Date.now() - withinMinutes * 60 * 1000);
+  const ts = admin.firestore.Timestamp.fromDate(since);
+  const snap = await db.collection('wyjazdy')
+    .where('createdAt', '>=', ts)
+    .limit(5)
+    .get();
+  // Preferuj wyjazd z e-Remizy (ma eremizaId) - bardziej wiarygodny
+  const withEremiza = snap.docs.filter(d => d.data().eremizaId);
+  if (withEremiza.length > 0) return withEremiza[0];
+  return snap.empty ? null : snap.docs[0];
 }
 
 async function fetchMessages() {
@@ -142,23 +160,31 @@ async function sendNotification(message) {
     await saveState();
     console.log('ALARM detected by keyword');
 
-    // Stworz wyjazd w Firestore zeby strazacy mogli reagowac
-    const alarmOpis = `${title} ${body} ${content}`.trim().substring(0, 300);
-    const wyjazdRef = db.collection('wyjazdy').doc();
-    wyjazdId = wyjazdRef.id;
-    await wyjazdRef.set({
-      tytul: 'Alarm - Kolumna',
-      lokalizacja: '',
-      opis: alarmOpis,
-      kategoria: 'miejscoweZagrozenie',
-      status: 'aktywny',
-      zrodlo: 'discord',
-      godzinaAlarmu: admin.firestore.FieldValue.serverTimestamp(),
-      dataWyjazdu: admin.firestore.FieldValue.serverTimestamp(),
-      utworzonePrzez: 'system_discord',
-      strazacyIds: [],
-    });
-    console.log('Discord alarm: created wyjazd ' + wyjazdId);
+    // Sprawdz czy juz istnieje wyjazd z ostatnich 10 minut (np. z e-Remizy)
+    const existingWyjazd = await findRecentWyjazd(10);
+    if (existingWyjazd) {
+      wyjazdId = existingWyjazd.id;
+      console.log('Discord alarm: znaleziono istniejacy wyjazd ' + wyjazdId + ' (zrodlo: ' + existingWyjazd.data().zrodlo + '), pomijam tworzenie');
+    } else {
+      // Stworz wyjazd w Firestore zeby strazacy mogli reagowac
+      const alarmOpis = `${title} ${body} ${content}`.trim().substring(0, 300);
+      const wyjazdRef = db.collection('wyjazdy').doc();
+      wyjazdId = wyjazdRef.id;
+      await wyjazdRef.set({
+        tytul: 'Alarm - Kolumna',
+        lokalizacja: '',
+        opis: alarmOpis,
+        kategoria: 'miejscoweZagrozenie',
+        status: 'aktywny',
+        zrodlo: 'discord',
+        godzinaAlarmu: admin.firestore.FieldValue.serverTimestamp(),
+        dataWyjazdu: admin.firestore.FieldValue.serverTimestamp(),
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        utworzonePrzez: 'system_discord',
+        strazacyIds: [],
+      });
+      console.log('Discord alarm: created wyjazd ' + wyjazdId);
+    }
   }
 
   const usersSnapshot = await db.collection('strazacy').get();
@@ -253,12 +279,154 @@ async function checkDiscord() {
   }
 }
 
+async function checkERemiza() {
+  if (eRemizaInFlight) return;
+  eRemizaInFlight = true;
+  try {
+    const cfgDoc = await db.collection('config').doc('eremiza').get();
+    if (!cfgDoc.exists || !cfgDoc.data().aktywne) return;
+    const { login, haslo } = cfgDoc.data();
+
+    const cookieJar = {};
+    const saveCookies = (response) => {
+      const raw = response.headers.raw ? (response.headers.raw()['set-cookie'] || []) : [];
+      raw.forEach((c) => {
+        const part = c.split(';')[0];
+        const [k, ...rest] = part.split('=');
+        if (k) cookieJar[k.trim()] = rest.join('=').trim();
+      });
+    };
+    const cookieHeader = () => Object.entries(cookieJar).map(([k, v]) => `${k}=${v}`).join('; ');
+
+    const loginPageRes = await fetch('https://e-remiza.pl/OSP.UI.SSO/logowanie', {
+      headers: { 'User-Agent': 'Mozilla/5.0' },
+    });
+    saveCookies(loginPageRes);
+    const loginHtml = await loginPageRes.text();
+    const $l = cheerio.load(loginHtml);
+    const csrfToken = $l('input[name="__RequestVerificationToken"]').val() || '';
+
+    const formBody = new URLSearchParams({
+      Email: login,
+      Password: haslo,
+      __RequestVerificationToken: csrfToken,
+    });
+
+    const loginRes = await fetch('https://e-remiza.pl/OSP.UI.SSO/logowanie', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'Mozilla/5.0',
+        Cookie: cookieHeader(),
+      },
+      body: formBody.toString(),
+      redirect: 'manual',
+    });
+    saveCookies(loginRes);
+    if (loginRes.status !== 302 && loginRes.status !== 200) {
+      console.warn('eRemiza login error, status:', loginRes.status);
+      return;
+    }
+
+    const alarmsRes = await fetch('https://e-remiza.pl/OSP.UI.EREMIZA/alarmy', {
+      headers: { 'User-Agent': 'Mozilla/5.0', Cookie: cookieHeader() },
+    });
+    saveCookies(alarmsRes);
+    if (alarmsRes.status !== 200) return;
+
+    const alarmsHtml = await alarmsRes.text();
+    const $ = cheerio.load(alarmsHtml);
+
+    const rows = [];
+    $('table tr').each((i, row) => {
+      if (i === 0) return;
+      const cols = $(row).find('td');
+      if (cols.length < 3) return;
+      rows.push({
+        czasStr: $(cols[0]).text().trim(),
+        rodzaj: $(cols[1]).text().trim(),
+        miejsceZdarzenia: $(cols[2]).text().trim(),
+        opis: cols.length > 3 ? $(cols[3]).text().trim() : '',
+      });
+    });
+
+    for (const alarm of rows) {
+      if (!alarm.czasStr) continue;
+      const dtMatch = alarm.czasStr.match(/(\d{2})-(\d{2})-(\d{4})\s+(\d{2}):(\d{2})/);
+      if (!dtMatch) continue;
+      const [, dd, mm, yyyy, hh, min] = dtMatch;
+      const dataAlarmu = new Date(`${yyyy}-${mm}-${dd}T${hh}:${min}:00`);
+
+      const wiek = Date.now() - dataAlarmu.getTime();
+      if (wiek > 2 * 60 * 60 * 1000) continue;
+
+      const eremizaId = `eremiza_${yyyy}${mm}${dd}_${hh}${min}_${alarm.miejsceZdarzenia.replace(/\s+/g, '_').substring(0, 30)}`;
+      if (knownEremizaIds.has(eremizaId)) continue;
+
+      const existing = await db.collection('wyjazdy').where('eremizaId', '==', eremizaId).limit(1).get();
+      if (!existing.empty) {
+        knownEremizaIds.add(eremizaId);
+        continue;
+      }
+
+      knownEremizaIds.add(eremizaId);
+      console.log('eRemiza: nowy alarm:', eremizaId);
+
+      const recentWyjazd = await findRecentWyjazd(10);
+      if (recentWyjazd && !recentWyjazd.data().eremizaId) {
+        // Discord byl szybszy - uzupelnij jego wyjazd o dane e-Remizy
+        await recentWyjazd.ref.update({
+          eremizaId,
+          tytul: alarm.rodzaj || recentWyjazd.data().tytul,
+          lokalizacja: alarm.miejsceZdarzenia || recentWyjazd.data().lokalizacja,
+          opis: alarm.opis || recentWyjazd.data().opis,
+          zrodlo: 'discord+eRemiza',
+          eremizaAlarmWyslany: true,
+        });
+        console.log('eRemiza: uzupelniono wyjazd Discord ' + recentWyjazd.id + ' o eremizaId ' + eremizaId);
+      } else if (!recentWyjazd) {
+        // E-Remiza jest pierwsza - stworz wyjazd i wyslij powiadomienie
+        const kategoria = alarm.rodzaj.toLowerCase().includes('po') ? 'pozar'
+          : alarm.rodzaj.toLowerCase().includes('miejscowe') ? 'miejscoweZagrozenie' : 'inne';
+        const docRef = await db.collection('wyjazdy').add({
+          eremizaId,
+          tytul: alarm.rodzaj || 'Alarm',
+          lokalizacja: alarm.miejsceZdarzenia || '',
+          opis: alarm.opis || '',
+          kategoria,
+          dataWyjazdu: admin.firestore.Timestamp.fromDate(dataAlarmu),
+          godzinaAlarmu: admin.firestore.FieldValue.serverTimestamp(),
+          status: 'aktywny',
+          zrodlo: 'e-remiza',
+          rodzaj: alarm.rodzaj,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          utworzonePrzez: 'system_eremiza_worker',
+          strazacyIds: [],
+          eremizaAlarmWyslany: false,
+        });
+        console.log('eRemiza: stworzono wyjazd ' + docRef.id + ' dla ' + eremizaId);
+        // sprawdzAlarmyERemiza (Cloud Function) wykryje eremizaAlarmWyslany:false i wysle FCM
+      }
+    }
+  } catch (err) {
+    console.error('eRemiza check error', err.message);
+  } finally {
+    eRemizaInFlight = false;
+  }
+}
+
 async function start() {
   await loadState();
   await checkDiscord();
-  const intervalMs = Math.max(1000, pollIntervalSeconds * 1000);
-  setInterval(checkDiscord, intervalMs);
-  console.log(`Discord worker started, interval ${intervalMs}ms`);
+  const discordIntervalMs = Math.max(1000, pollIntervalSeconds * 1000);
+  setInterval(checkDiscord, discordIntervalMs);
+  console.log(`Discord worker started, interval ${discordIntervalMs}ms`);
+
+  const eRemizaIntervalMs = Math.max(30000, eRemizaPollIntervalSeconds * 1000);
+  setInterval(checkERemiza, eRemizaIntervalMs);
+  console.log(`eRemiza worker started, interval ${eRemizaIntervalMs}ms`);
+  // Pierwsze sprawdzenie e-Remizy po 5s (zeby Discord sie zaladowal pierwszy)
+  setTimeout(checkERemiza, 5000);
 }
 
 // HTTP healthcheck endpoint dla Render Web Service
@@ -268,6 +436,7 @@ app.get('/', (req, res) => {
     status: 'running', 
     lastMessageId: lastMessageId || null,
     lastAlarmAt: lastAlarmAt ? lastAlarmAt.toISOString() : null,
+    eRemizaKnownIds: knownEremizaIds.size,
     uptime: process.uptime()
   });
 });
