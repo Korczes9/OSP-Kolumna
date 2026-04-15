@@ -11,7 +11,7 @@ const alarmKeyword = String(process.env.DISCORD_ALARM_KEYWORD || 'KOLUMNA');
 const alarmCooldownMinutes = Number(process.env.DISCORD_ALARM_COOLDOWN_MINUTES || '4');
 const stateDocPath = process.env.DISCORD_STATE_DOC || 'config/discord_monitor';
 const port = Number(process.env.PORT || '10000');
-const eRemizaPollIntervalSeconds = Number(process.env.EREMIZA_POLL_INTERVAL_SECONDS || '60');
+const eRemizaPollIntervalSeconds = Number(process.env.EREMIZA_POLL_INTERVAL_SECONDS || '5');
 
 const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT || '';
 const serviceAccountB64 = process.env.FIREBASE_SERVICE_ACCOUNT_B64 || '';
@@ -385,7 +385,7 @@ async function checkERemiza() {
         });
         console.log('eRemiza: uzupelniono wyjazd Discord ' + recentWyjazd.id + ' o eremizaId ' + eremizaId);
       } else if (!recentWyjazd) {
-        // E-Remiza jest pierwsza - stworz wyjazd i wyslij powiadomienie
+        // E-Remiza jest pierwsza - stworz wyjazd i wyslij FCM bezposrednio
         const kategoria = alarm.rodzaj.toLowerCase().includes('po') ? 'pozar'
           : alarm.rodzaj.toLowerCase().includes('miejscowe') ? 'miejscoweZagrozenie' : 'inne';
         const docRef = await db.collection('wyjazdy').add({
@@ -402,10 +402,31 @@ async function checkERemiza() {
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
           utworzonePrzez: 'system_eremiza_worker',
           strazacyIds: [],
-          eremizaAlarmWyslany: false,
+          eremizaAlarmWyslany: true,
         });
         console.log('eRemiza: stworzono wyjazd ' + docRef.id + ' dla ' + eremizaId);
-        // sprawdzAlarmyERemiza (Cloud Function) wykryje eremizaAlarmWyslany:false i wysle FCM
+
+        // Kolejkuj FCM bezposrednio (tak jak Discord) - bez czekania na Cloud Function
+        const usersSnapshot = await db.collection('strazacy').get();
+        const tokens = usersSnapshot.docs
+          .map((d) => d.data().fcmToken)
+          .filter((t) => t && String(t).length > 0);
+        if (tokens.length > 0) {
+          await db.collection('powiadomienia').add({
+            tokens,
+            title: '🚨 ALARM!',
+            body: `${alarm.rodzaj || 'Alarm'} - ${alarm.miejsceZdarzenia || ''}`.trim(),
+            data: {
+              type: 'ALARM',
+              wyjazdId: docRef.id,
+              kategoria: 'eRemiza',
+              lokalizacja: alarm.miejsceZdarzenia || '',
+            },
+            utworzonoO: admin.firestore.FieldValue.serverTimestamp(),
+            wyslane: false,
+          });
+          console.log('eRemiza: FCM zakolejkowany dla ' + tokens.length + ' tokenow, wyjazdId: ' + docRef.id);
+        }
       }
     }
   } catch (err) {
@@ -422,11 +443,11 @@ async function start() {
   setInterval(checkDiscord, discordIntervalMs);
   console.log(`Discord worker started, interval ${discordIntervalMs}ms`);
 
-  const eRemizaIntervalMs = Math.max(30000, eRemizaPollIntervalSeconds * 1000);
+  const eRemizaIntervalMs = Math.max(5000, eRemizaPollIntervalSeconds * 1000);
   setInterval(checkERemiza, eRemizaIntervalMs);
   console.log(`eRemiza worker started, interval ${eRemizaIntervalMs}ms`);
-  // Pierwsze sprawdzenie e-Remizy po 5s (zeby Discord sie zaladowal pierwszy)
-  setTimeout(checkERemiza, 5000);
+  // Pierwsze sprawdzenie e-Remizy po 3s (zeby Discord sie zaladowal pierwszy)
+  setTimeout(checkERemiza, 3000);
 }
 
 // HTTP healthcheck endpoint dla Render Web Service
